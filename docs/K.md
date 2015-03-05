@@ -1,0 +1,81 @@
+
+# Algorithm Theoretical Basis for "Geomag XYZ"
+
+E. Joshua Rigler &lt;[erigler@usgs.gov](mailto:erigler@usgs.gov)&gt;
+
+
+## Summary
+
+<TODO: 1 paragraph summary>
+
+
+## Background and Motivation
+
+<TODO: define any variables and refer to equations used>
+<TODO: explain why K is used and what it is useful for>
+
+
+## Math and Theory
+
+<TODO: define equations>
+<TODO: explain equations and why they are valid for this use>
+<TODO: include image if needed>
+<TODO: discuss edge cases>
+
+
+## Practical Considerations
+
+### Magnetic Intensity Units
+
+It is understood that all raw data inputs are provided in units of nanoTesla
+(nT). Of course this is not required for the equations to be valid, but it is
+incumbent on the programmer to make sure all input data units are the same, and
+that output units are defined accurately.
+
+### Declination Angular Units
+
+The equations in the preceding section are relatively simple to code up, with
+the standard caveat that angles must be appropriate for the trigonometric
+functions (e.g., if sin/cos/tan expect radians, be sure to provide parameters
+in radians). One thing that can potentially complicate this is that IAGA
+standards require declination angles to be in minutes of arc. Furthermore, D0
+(DECBAS) is not very well-defined by IAGA standards, but is typically reported
+in tenths of minutes of arc. None of these are difficult to convert, but it is
+incumbent on the programmer to make sure they know what units are being used
+for the inputs.
+
+> Note: this library internally uses radians for all angles, and factories
+> convert to and from this standard.
+
+### Declination Baseline
+
+Declination baseline is not well-defined by IAGA standards. The typical method
+used to publish it with actual data is to include it in the metadata. For older
+IMF formatted files, it is part of the periodic block header. For IAGA2002
+formatted file, it may be in the file header, but is not required. To the
+best of my knowledge, if it is not included, one should assume it is zero, but
+no corroborating documentation could be found to justify this statement.
+
+> Note: this library makes declination baseline available in trace stats as
+> `declination_base` ([see all trace metadata](./metadata.md).  The IAGA Factory
+> also attempts to parse DECBAS from the comments section.
+
+### Declination in USGS Variations Data
+
+The USGS variations data is actually published in hdZ coordinates. If one
+wishes to apply equations in the preceding section to USGS variations data,
+they must first convert "d" back into "e" via [Eq. 11](#eq11).
+
+### Data Flags
+
+It should go without saying that bad data in one coordinate system is bad data
+in another. However, on occasion, operational USGS Geomagnetism Program code has
+been discovered where coordinate transformations were applied
+before checking data flags. This is not an issue if data flags are NaN
+(not-a-number values), but more typical for Geomag data, these are values like
+99999, which can lead to seemingly valid, but erroneous values at times when the
+raw data were known to be bad.
+
+> Note: this library internally represents data gaps as NaN, and factories
+> convert to this where possible.
+
