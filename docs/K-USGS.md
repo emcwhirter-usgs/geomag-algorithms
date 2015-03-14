@@ -1,5 +1,5 @@
 
-# Algorithm Theoretical Basis for "Geomag XYZ"
+# Algorithm Theoretical Basis for "K-USGS"
 
 E. Joshua Rigler &lt;[erigler@usgs.gov](mailto:erigler@usgs.gov)&gt;
 
@@ -10,6 +10,23 @@ E. Joshua Rigler &lt;[erigler@usgs.gov](mailto:erigler@usgs.gov)&gt;
 
 
 ## Background and Motivation
+
+The USGS has been producing digital K-Indices since 1979. The "K-USGS" algorithm
+was written to attempt to simulate the previously used hand-scaled process as
+closely as possible. This method is described in "[An Evaluation of Digitally
+Derived K-Indices][]", J. Geomag. Geoelectr., 39, 1987 by Lanny R. Wilson. The
+algorithm was tested and found acceptable in 1990 using IAGA WG-5 data. It
+tested again in 2010 using a subset of USGS data, and was found to still be
+acceptable.
+
+Subset of USGS used for testing in 2010:
+- CMO 1992
+- FRD 1985-1994,1997
+- GUA 1992-1994
+- SJG 1992-1994
+- TUC 1992-1993
+
+[An Evaluation of Digitally Derived K-Indices]: https://www.jstage.jst.go.jp/article/jgg1949/39/2/39_2_97/_article
 
 <TODO: define any variables and refer to equations used>
 <TODO: explain why K is used and what it is useful for>
