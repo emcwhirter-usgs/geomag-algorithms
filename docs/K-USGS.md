@@ -14,10 +14,10 @@ E. Joshua Rigler &lt;[erigler@usgs.gov](mailto:erigler@usgs.gov)&gt;
 The USGS has been producing digital K-Indices since 1979. The "K-USGS" algorithm
 was written to attempt to simulate the previously used hand-scaled process as
 closely as possible. This method is described in "[An Evaluation of Digitally
-Derived K-Indices][]", J. Geomag. Geoelectr., 39, 1987 by Lanny R. Wilson. The
-algorithm was tested and found acceptable in 1990 using IAGA WG-5 data. It
-tested again in 2010 using a subset of USGS data, and was found to still be
-acceptable.
+Derived K-Indices][]", J. Geomag. Geoelectr., 39, 1987 by Lanny R. Wilson pages
+97-109. The algorithm was tested and found acceptable in 1990 using IAGA WG-5
+data. It tested again in 2010 using a subset of USGS data, and was found to
+still be acceptable.
 
 Subset of USGS used for testing in 2010:
 - CMO 1992
@@ -29,10 +29,28 @@ Subset of USGS used for testing in 2010:
 [An Evaluation of Digitally Derived K-Indices]: https://www.jstage.jst.go.jp/article/jgg1949/39/2/39_2_97/_article
 
 <TODO: define any variables and refer to equations used>
-<TODO: explain why K is used and what it is useful for>
+
+The 3-hour K-Index was introduced by Bartels (1938) as a measure of irregular
+and rapid storm-time magnetic activity. It was designed to be insensitive to
+longer term components of magnetic variation and to normalize the occurence
+frequency of individual K values among many observatories, over many years.
+Thus, with this method, there is a separate K-Index for each observatory. It
+has come to be used much more generally as a measure of the magnetic activity at
+an observatory at any given time.
 
 
 ## Math and Theory
+
+### Inputs ###
+- Station ID
+- Start Time
+- End Time
+- H Time-Series Data
+- D Time-Series Data
+
+The algorithm for computing K-USGS is based on a CubicSpline. Before this can
+be properly calculated, all data gaps, dead values and bad data must be
+replaced.
 
 <TODO: define equations>
 <TODO: explain equations and why they are valid for this use>
