@@ -60,6 +60,16 @@ In general the K-USGS algorithm consists of these steps:
 - H Time-Series Data
 - D Time-Series Data
 
+### Static Defaults and Configurable Values ###
+* `MeansPerSegment  3                          // Configurable 3 or 4`
+* `MinutesPerMean3HrList { 12, 20, 30, 36, 60 }`
+* `MinutesPerMean24List { 12, 20, 24, 30, 36, 48, 60, 72, 90 }`
+* `MinutesPerMean   60                         // Configurable from 12 to 180`
+* `StationK9Value   2500                       // Configurable from 50 to 3500`
+* `StandardDeviationFor1MinuteValues 2.5       // Configurable 0.50 to 7.00`
+* `StandardDeviationForMeanValues    1.8       // Configurable 0.50 to 7.00`
+
+### Computation ###
 The algorithm for computing K-USGS is based on a CubicSpline. Before this can
 be properly calculated, all data gaps, dead values and bad data must be
 replaced with values. This is done by first calculating some statistics about
@@ -70,8 +80,16 @@ the data.
 An extra buffer of data is added to the front and back of the data.
 * Equation 3: `DataBuffer = 2 * 60 minutes per mean`
 * Equation 4: `DataWidth = DataMinutes + 2 * DataBuffer`
-An extra point is added to the end of the means to act as an anchor.
+An extra point is added to the means to act as an anchor to the end of the data.
 * Equation 5: `NumberOfMeans = 1 + DataWidth / 60 minutes per mean`
+
+Next, loop over the data several times while skipping DEAD values. Each "Mean"
+has 60 1-Minute Values associated with it. Find:
+`HighestMeanValue`, `LowestMeanValue`, `MeanCount`, `MeanSum`,
+`SumOfSquaresOfMeansOf1MinuteValues`, `HighMinute`, `LowMinute`,
+`MinuteCount`, `MinuteSum`.
+If more than half of the minute values for a mean are DEAD, the mean is DEAD.
+If `HighMinute - LowMinute > 5 * StationK9Value / 500`, the mean is DEAD.
 
 <TODO: define equations>
 <TODO: explain equations and why they are valid for this use>
