@@ -55,14 +55,23 @@ In general the K-USGS algorithm consists of these steps:
 
 ### Inputs ###
 - Station ID
-- Start Time
-- End Time
+- Start Time (ST)
+- End Time (ET)
 - H Time-Series Data
 - D Time-Series Data
 
 The algorithm for computing K-USGS is based on a CubicSpline. Before this can
 be properly calculated, all data gaps, dead values and bad data must be
-replaced with values.
+replaced with values. This is done by first calculating some statistics about
+the data.
+
+* Equation 1: `DataDays = 1 + ET - ST`
+* Equation 2: `DataMinutes = DataDays * 1440 minutes per day`
+An extra buffer of data is added to the front and back of the data.
+* Equation 3: `DataBuffer = 2 * 60 minutes per mean`
+* Equation 4: `DataWidth = DataMinutes + 2 * DataBuffer`
+An extra point is added to the end of the means to act as an anchor.
+* Equation 5: `NumberOfMeans = 1 + DataWidth / 60 minutes per mean`
 
 <TODO: define equations>
 <TODO: explain equations and why they are valid for this use>
