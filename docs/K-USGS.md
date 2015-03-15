@@ -83,13 +83,25 @@ An extra buffer of data is added to the front and back of the data.
 An extra point is added to the means to act as an anchor to the end of the data.
 * Equation 5: `NumberOfMeans = 1 + DataWidth / 60 minutes per mean`
 
-Next, loop over the data several times while skipping DEAD values. Each "Mean"
+Next, loop over the data skipping DEAD values. Each "Mean"
 has 60 1-Minute Values associated with it. Find:
 `HighestMeanValue`, `LowestMeanValue`, `MeanCount`, `MeanSum`,
 `SumOfSquaresOfMeansOf1MinuteValues`, `HighMinute`, `LowMinute`,
-`MinuteCount`, `MinuteSum`.
+`MinuteCount`, `MinuteSum`, `HighestValue`, `LowestValue`, `HighestRange`,
+`LowestRange`.
 If more than half of the minute values for a mean are DEAD, the mean is DEAD.
 If `HighMinute - LowMinute > 5 * StationK9Value / 500`, the mean is DEAD.
+If the mean is DEAD, skip Equations 6, 7
+
+* Equation 6: `MeanValue = MinuteSum / MinuteCount`
+* Equation 7: `MeanCount++`
+* Equation 8: `MeanSum += MeanValue`
+* Equation 9: `SumOfSquaresOfMeansOf1MinuteValues += MeanValue^2`
+* Equation 10: `RangeMeanSum += HighMinute - LowMinute`
+* Equation 11: `MeanOfSquaresOfMeanRangeSum += RangeMeanSum^2`
+
+After looping the data, create some statistic values.
+* Equation 12: ``
 
 <TODO: define equations>
 <TODO: explain equations and why they are valid for this use>
