@@ -14,6 +14,7 @@ intervals that a translated to values 0 through 9. The K-USGS algorithm differs
 from other K-Indices estimates a non-K variation curve for each day instead of
 using the typical Solar Quiet (SQ) algorithm as an input.
 
+
 ## Background and Motivation
 
 The USGS has been producing digital K-Indices since 1979. The "K-USGS" algorithm
@@ -24,25 +25,30 @@ Derived K-Indices][]", J. Geomag. Geoelectr., 39, 1987 by Lanny R. Wilson pages
 data. It tested again in 2010 using a subset of USGS data, and was found to
 still be acceptable.
 
-Subset of USGS used for testing in 2010:
-- CMO 1992
-- FRD 1985-1994,1997
-- GUA 1992-1994
-- SJG 1992-1994
-- TUC 1992-1993
-
 [An Evaluation of Digitally Derived K-Indices]: https://www.jstage.jst.go.jp/article/jgg1949/39/2/39_2_97/_article
-
-<TODO: define any variables and refer to equations used>
 
 The 3-hour K-Index was introduced by Bartels (1938) as a measure of irregular
 and rapid storm-time magnetic activity. This same process was defined in detail
-by Mayaud in 1957. It was designed to be insensitive to
-longer term components of magnetic variation and to normalize the occurence
-frequency of individual K values among many observatories, over many years.
-Thus, with this method, there is a separate K-Index for each observatory. It
-has come to be used much more generally as a measure of the magnetic activity at
-an observatory at any given time.
+by Mayaud in 1957. It was designed to be insensitive to longer term components
+of magnetic variation and to normalize the occurence frequency of individual K
+values among many observatories, over many years. Thus, with this method, there
+is a separate K-Index for each observatory. It has come to be used much more
+generally as a measure of the magnetic activity at an observatory at any given
+time, as opposed to just during magnetic storms.
+
+In general the K-USGS algorithm consists of these steps:
+1. Determine the number of minutes and means to use based on the selected time
+   range.
+1. Determine an acceptable range for the selected data. Replace any values
+   outside of that range with DEAD values.
+1. Replace all DEAD values with values interpolated from valid values near the
+   DEAD values.
+1. Create line segments and intercepts.
+1. Create a Spline.
+1. Create a Cubic Spline.
+
+> Subset of USGS used for testing in 2010 included:
+> CMO 1992; FRD 1985-1994,1997; GUA 1992-1994; SJG 1992-1994; TUC 1992-1993
 
 
 ## Math and Theory
