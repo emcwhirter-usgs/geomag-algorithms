@@ -2,12 +2,17 @@
 # Algorithm Theoretical Basis for "K-USGS"
 
 E. Joshua Rigler &lt;[erigler@usgs.gov](mailto:erigler@usgs.gov)&gt;
+Edward A. McWhirter Jr. &lt;[emcwhirter@usgs.gov](mailto:emcwhirter@usgs.gov)&gt;
 
 
 ## Summary
 
-<TODO: 1 paragraph summary>
-
+K-Indices are used as an approximate measure of magnetic activity at an
+observatory. A scale is adopted for each observatory based on the typical
+distribution of magnetic activity at that location. The scale is devided into
+intervals that a translated to values 0 through 9. The K-USGS algorithm differs
+from other K-Indices estimates a non-K variation curve for each day instead of
+using the typical Solar Quiet (SQ) algorithm as an input.
 
 ## Background and Motivation
 
@@ -31,7 +36,8 @@ Subset of USGS used for testing in 2010:
 <TODO: define any variables and refer to equations used>
 
 The 3-hour K-Index was introduced by Bartels (1938) as a measure of irregular
-and rapid storm-time magnetic activity. It was designed to be insensitive to
+and rapid storm-time magnetic activity. This same process was defined in detail
+by Mayaud in 1957. It was designed to be insensitive to
 longer term components of magnetic variation and to normalize the occurence
 frequency of individual K values among many observatories, over many years.
 Thus, with this method, there is a separate K-Index for each observatory. It
