@@ -181,9 +181,54 @@ Next, loop over the data again and replace all DEAD values with an
 interpolated value based on the closest points in the data moving forward. If
 there are no non-DEAD values forward in time, then look backwards instead.
 
+#### Create Segments and Intercepts ####
+
+* Equation 26: `NumberOfSegments = NumberOfMeans - MeansPerSegment + 1`
+
+For each segment, find a the slope and intercept.
+
+* Equation 27: `Slope = (SumOfMeans * SumOfMeanXbySumOfMeanY - SumX * SumY) / (SumOfMeans * SumOfMeanXbySumofMeanX - SumX * SumX)`
+* Equation 28: `Intercept = (SumY - Slope * SumX) / SumOfMeans`
+
+Keep track of where the segments intercept each other: `Intercepts[]`.
+
+#### Create Spline ####
+
+Start and end points.
+
+* Equation 29: `End = Intercepts.length - 1`
+* Equation 30: `q1 = (Intercepts[1].y - Intercepts[0].y) / (Intercepts[1].x - Intercepts[0].x)`
+* Equation 31: `qn = (Intercepts[End].y - InterceptPts[End-1].y ) / (Intercepts[End].x - Intercepts[End-1].x )`
+
+* Equation 32: `Delta[1] = Intercepts[1].x - Intercepts[0].x`
+* Equation 33: `V[0] = 6.0 * (((Intercepts[1].y - Intercepts[0].y) / Delta[1]) - q1)`
+
+Smooth the curve from the 2nd point to the 2nd-to-last point. Smooth the curve
+again from the 3rd point to the 2nd-to-last point using Gaussian Elimination and
+Augmentation. Then back substitute and fill in `Spline[]`.
+
+#### Create Cubic Spline ####
+
+Loop over data, use `Spline[]` to create `CSpline[]`:
+
+* Equation 34 `u = DataPoint / 60.0`  // Fractional hour indicated by the current data point
+* Equation 35 `Upper = Intercepts[UpperPt].x - u` // Distance from start point
+* Equation 36 `Lower = u - Intercepts[LowerPt].x` // Distance from end point
+
+* Equation 37 `ff1 = Spline[LowerPt] * Upper^3`
+* Equation 38 `ff2 = Spline[UpperPt] * Lower^3`
+* Equation 39 `ff3 = 1.0 / (6.0 * Delta[UpperPt])`
+
+* Equation 40 `f1  = (ff1 + ff2) * ff3`
+* Equation 41 `f2  = Lower * ((Intercepts[UpperPt].y / Delta[UpperPt]) - (Spline[UpperPt] * Delta[UpperPt]) / 6.0)`
+* Equation 42 `f3  = Upper * ((Intercepts[LowerPt].y / Delta[UpperPt]) - (Spline[LowerPt] * Delta[UpperPt]) / 6.0)`
+* Equation 43 `CSpline[DataPoint] = f1 + f2 + f3`
+
+
 <TODO: compare this to code again to ensure nothing was lost>
 <TODO: include images if needed>
 <TODO: discuss edge cases>
+
 
 
 ## Practical Considerations
