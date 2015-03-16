@@ -101,11 +101,58 @@ If the mean is DEAD, skip Equations 6, 7
 * Equation 11: `MeanOfSquaresOfMeanRangeSum += RangeMeanSum^2`
 
 After looping the data, create some statistic values.
-* Equation 12: ``
+* Equation 12: `DataMean = DataMeanSum / DataMeanCount`
+* Equation 13: `MeanofSqrs1MinuteValues = MeanofSqrs1MinuteValuesSum / Data Count`
+* Equation 14: `DataStandardDeviation = sqrt(MeanofSqrs1MinuteValues - DataMean^2)`
+* Equation 15: `DataMax = DataMean + 2.5 * StandardDeviation`
+* Equation 16: `DataMin = DataMean - 2.5 * StandardDeviation`
+-------------------------------------------------------------------
+* Equation 17: `ValueMean = ValueMeanSum / MeanCount`
+* Equation 18: `MeanOfSqrsMeanValues = MeanOfSqrsMeanValuesSum / MeanCount`
+* Equation 19: `ValueStandardDeviation = sqrt(MeanofSqrs1MeanValues - ValueMean^2)`
+* Equation 20: `ValueMax = ValueMean + 1.8 * ValueStandardDeviation`
+* Equation 21: `ValueMin = ValueMean - 1.8 * ValueStandardDeviation`
+-------------------------------------------------------------------
+* Equation 22: `RangeMean = RangeMeanSum / MeanCount`
+* Equation 23: `MeanofSqrsMeanRange = MeanofSqrsMeanRangeSum / MeanCount`
+* Equation 24: `RangeStandardDeviation = sqrt(MeanofSqrsMeanRange - RangeMean^2)`
+* Equation 25: `RangeMax = RangeMean + 1.8 * RangeStandardDeviation`
+-------------------------------------------------------------------
+* Equation 26: `DataStandardError = DataStandardDeviation / DataMeanCount`
+* Equation 27: `DataMedian = LowestMeanValue + (HighestMeanValue - LowestMeanValue)/2.0`
+-------------------------------------------------------------------
+* Equation 28: `ValueStandardError = ValueStandardDeviation / MeanCount`
+* Equation 29: `ValueMedian = ValueLowValue + (ValueHighValue - ValueLowValue)/2.0`
+-------------------------------------------------------------------
+* Equation 30: `RangeStandardError = RangeStandardDeviation / MeanCount`
+* Equation 31: `RangeMedian = RangeLowValue + (RangeHighValue - RangeLowValue)/2.0`
+-------------------------------------------------------------------
+* Equation 32: `DataInterval = (HighestMeanValue - LowestMeanValue) / 10.0`
+* Equation 33: `ValueInterval = (ValueHighValue - ValueLowValue) / 10.0`
+* Equation 34: `RangeInterval = (RangeHighValue - RangeLowValue) / 10.0`
 
-<TODO: define equations>
-<TODO: explain equations and why they are valid for this use>
-<TODO: include image if needed>
+X (Time) values are fractional hours centered on the minute data used for the
+mean. So, if MeansPerMinute is 60, the 1st range is 0.5hr.
+* Equation 35: `Interval = MinutesPerMean / 60min/hr = 60.0 / 60.0 = 1.0`
+* Equation 36: `Offset = Interval / 2.0 = 1.0 / 2.0 = 0.5`
+
+Once all of these values are found, loop over all of the means and the minutes
+in each mean, still skipping DEAD values to reject values based on found
+statistics. If the MinuteValue is between HighestMeanValue and LowestMeanValue,
+then:
+* Equation 37: `ValueIndex = Floor( (MinuteValue-LowestMeanValue) / DateInterval )`
+Otherwise the value is outside of the acceptable range and should be rejected.
+Rejected values are replaced with DEAD values. Reject the mean and replace it
+with a DEAD value if more than half of the minutes are DEAD, if the range of
+minutes is greater than RangeMax or if the MeanValue is not between ValueMin
+and ValueMax.
+
+After that, loop over the data again and replace all DEAD values with an
+interpolated value based on the closest points in the data moving forward. If
+there are no non-DEAD values forward in time, then look backwards instead.
+
+
+<TODO: include images if needed>
 <TODO: discuss edge cases>
 
 
