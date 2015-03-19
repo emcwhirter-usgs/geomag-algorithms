@@ -8,21 +8,43 @@ Edward A. McWhirter Jr. &lt;[emcwhirter@usgs.gov](mailto:emcwhirter@usgs.gov)&gt
 
 ## Summary ##
 
-K-Indices are used as an approximate measure of magnetic activity at an observatory over a 3-hour window. A scale is adopted for each observatory based on the typical distribution of magnetic activity at that location. The scale is divided into intervals that a translated to values 0 through 9.
+K-Indices are used as an approximate measure of magnetic activity at an
+observatory over a 3-hour window. A scale is adopted for each observatory based
+on the typical distribution of magnetic activity at that location. The scale is
+divided into intervals that a translated to values 0 through 9.
 
 
 ## Background and Motivation ##
 
-The 3-hour K-Index was introduced by [Bartels (1939)](#bartels-1939) as a measure of irregular and rapid storm-time magnetic activity. This same process was defined in detail by [Mayaud (1957)](#mayaud-1957). It was designed to be insensitive to longer term components of magnetic variation and to normalize the occurrence frequency of individual K values among many observatories, over many years. Thus, with this method, there is a separate K-Index for each observatory. It has come to be used much more generally as a measure of the magnetic activity at an observatory at any given time, as opposed to just during magnetic storms.
+The 3-hour K-Index was introduced by [Bartels (1939)](#bartels-1939) as a
+measure of irregular and rapid storm-time magnetic activity. This same process
+was defined in detail by [Mayaud (1957)](#mayaud-1957). It was designed to be
+insensitive to longer term components of magnetic variation and to normalize the
+occurrence frequency of individual K values among many observatories, over many
+years. Thus, with this method, there is a separate K-Index for each observatory.
+It has come to be used much more generally as a measure of the magnetic activity
+at an observatory at any given time, as opposed to just during magnetic storms.
 
+The K-USGS algorithm differs from other K-Indices algorithms in one regard. A
+non-K variation curve is calculated for each day instead of using the typical
+Solar Quiet (SQ) algorithm as an input, which means that K-USGS can be
+calculated with just the raw time-series data as inputs.
 
-The K-USGS algorithm differs from other K-Indices algorithms in one regard. A non-K variation curve is calculated for each day instead of using the typical Solar Quiet (SQ) algorithm as an input, which means that K-USGS can be calculated with just the raw time-series data as inputs.
-
-The USGS has been producing digital K-Indices since 1979. The K-USGS algorithm was one of many written to attempt to simulate the previously used hand-scaled process as closely as possible, and was one of the four to be officially accepted by an IAGA Working Group V during the Vienna IUGG General Assembly in 1991. This method is described in "[Wilson (1987)](#wilson-1987). The algorithm was tested and found acceptable in 1990 using IAGA WG-5 data. It was tested again in 2010 using a subset of USGS data, and was found to still be acceptable for producing K-Indices.
+The USGS has been producing digital K-Indices since 1979. The K-USGS algorithm
+was one of many written to attempt to simulate the previously used hand-scaled
+process as closely as possible, and was one of the four to be officially
+accepted by an IAGA Working Group V during the Vienna IUGG General Assembly in
+1991. This method is described in "[Wilson (1987)](#wilson-1987). The algorithm
+was tested and found acceptable in 1990 using IAGA WG-5 data. It was tested
+again in 2010 using a subset of USGS data, and was found to still be acceptable
+for producing K-Indices.
 
 In general, the K-USGS algorithm consists of these steps:
- 1. Create daily SR-curves for every day in the selected data window.
- 2.
+ 1. Eliminate any 1-Minute Values and Mean Hourly Values that fall outside of
+    acceptable statistical limits.
+ 2. Create daily SR-curves for every day in the selected data window.
+ 3. Remove the SR-curve to find the K variation of the data.
+ 4. Translate the K variation on a 0 to 9 scale.
 
 > Subset of USGS data used for testing in 2010 included:
 > CMO 1992; FRD 1985-1994,1997; GUA 1992-1994; SJG 1992-1994; TUC 1992-1993
@@ -30,33 +52,72 @@ In general, the K-USGS algorithm consists of these steps:
 
 ## Math and Theory ##
 
+### Clean the Data ###
+
+A data set for calculating the SR-Curve that K-USGS depends on includes the 24
+Mean Hourly Values (MHVs) for a single day plus the last 2 MHVs of the previous
+day and the first 2 MHVs of the following day. This is required for each UTC
+calendar day in the desired data range. In order to get a good representative
+curve of the magnetic activity, some data points should be excluded from
+calculations. These exclusions are:
+* MHVs containing minute values having an extreme range.
+* MHVs that fall in the tails of the monthly MHV distribution.
+
 ### SR Curve ###
 
-An SR-curve represents the regular daily variation of magnetic activity. During magnetically quiet periods the SR-curve is generally a smooth line that follows the form of the magnetic data. This curve represents the “non-K variation” of the data.
+An SR-curve represents the regular daily variation of magnetic activity. During
+magnetically quiet periods the SR-curve is generally a smooth line that follows
+the form of the magnetic data. This curve represents the “non-K variation” of
+the data, and it is calculated for both the Horizontal Intensity (H) data and
+the Declination (D) data.
 
-The SR-curve is created by first making a least squares fit of straight lines to a sliding set of three Mean Hourly Values (MHVs) to generate a series of intersecting lines. A set of MHVs includes the 24 MHVs for a single day plus the last 2 MHVs of the previous day and the first 2 MHVs of the following day. A cubic spline is then computed with the intercept points of the consecutive lines.
+The SR-curve is created by first making a least squares fit of straight lines to
+a sliding set of three MHVs to generate a series of intersecting lines. A cubic
+spline is then computed with the intercept points of the consecutive lines.
 
 ![Segments fit to Mean Hourly Values](images/K-USGS_SR-Curve.png)
+
+### Translate ###
+
+The K variation is what remains in the data when the SR-curve is subtracted from
+the remaining data. The larger of the two K variations, between H and D, is used
+for each time interval. Each observatory has an adopted scale based on the
+distribution of magnetic activity observed. This scale is used to translate the
+K variation of the data onto a 0 to 9 scale.
 
 
 ## Practical Considerations ##
 
 ### Magnetic Intensity Units ###
 
-It is understood that all raw data inputs are provided in units of nanoTesla (nT). Of course this is not required for the equations to be valid, but it is incumbent on the programmer to make sure all input data units are the same, and that output units are defined accurately.
+It is understood that all raw data inputs are provided in units of nanoTesla
+(nT). Of course this is not required for the equations to be valid, but it is
+incumbent on the programmer to make sure all input data units are the same, and
+that output units are defined accurately.
 
 ### Data Flags ###
 
-It should go without saying that bad data in one coordinate system is bad data in another. However, on occasion, operational USGS Geomagnetism Program code has been discovered where coordinate transformations were applied before checking data flags. This is not an issue if data flags are NaN (not-a-number values), but more typical for Geomag data, these are values like 99999, which can lead to seemingly valid, but erroneous values at times when the raw data were known to be bad.
+It should go without saying that bad data in one coordinate system is bad data
+in another. However, on occasion, operational USGS Geomagnetism Program code has
+been discovered where coordinate transformations were applied before checking
+data flags. This is not an issue if data flags are NaN (not-a-number values),
+but more typical for Geomag data, these are values like 99999, which can lead to
+seemingly valid, but erroneous values at times when the raw data were known to
+be bad.
 
 > Note: this library internally represents data gaps as NaN, and factories
 > convert to this where possible.
 
+
 ## References ##
 
-Bartels, J., Heck, N.H., and Johnston, H.F. (1939), [The three-hour-range index measuring geomagnetic activity](http://onlinelibrary.wiley.com/doi/10.1029/TE044i004p00411/abstract) <a name=bartels-1939”></a>
+Bartels, J., Heck, N.H., and Johnston, H.F. (1939),
+  [The three-hour-range index measuring geomagnetic activity](http://onlinelibrary.wiley.com/doi/10.1029/TE044i004p00411/abstract)
+  <a name=bartels-1939”></a>
 
-Mayaud, P.N., Atlas of indices K, JAGA Bulletin, 21, 113pp., 1957<a name="mayaud-1957"></a>
+Mayaud, P.N., Atlas of indices K, JAGA Bulletin, 21, 113pp., 1957
+  <a name="mayaud-1957"></a>
 
-Wilson, L.R. (1987), [An Evaluation of Digitially Derived K-Indices](https://www.jstage.jst.go.jp/article/jgg1949/39/2/39_2_97/_article),
+Wilson, L.R. (1987),
+  [An Evaluation of Digitially Derived K-Indices](https://www.jstage.jst.go.jp/article/jgg1949/39/2/39_2_97/_article),
   *J. Geomag. Geoelectr.*, **39**, pp 97-109 <a name="wilson-1987"></a>
