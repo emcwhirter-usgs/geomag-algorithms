@@ -65,11 +65,11 @@ calculations. These exclusions are:
 
 ### SR Curve ###
 
-An SR-curve represents the regular daily variation of magnetic activity. During
-magnetically quiet periods the SR-curve is generally a smooth line that follows
-the form of the magnetic data. This curve represents the “non-K variation” of
-the data, and it is calculated for both the Horizontal Intensity (H) data and
-the Declination (D) data.
+An SR-curve represents the Solar Regular (SR) daily variation of magnetic
+activity. During magnetically quiet periods the SR-curve is generally a smooth
+line that follows the form of the magnetic data. This curve represents the
+“non-K variation” of the data, and it is calculated for both the Horizontal
+Intensity (H) data and the Declination (D) data.
 
 The SR-curve is created by first making a least squares fit of straight lines to
 a sliding set of three MHVs to generate a series of intersecting lines. A cubic
