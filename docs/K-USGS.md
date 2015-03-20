@@ -80,10 +80,14 @@ spline is then computed with the intercept points of the consecutive lines.
 ### Translate ###
 
 The K variation is what remains in the data when the SR-curve is subtracted from
-the remaining data. The larger of the two K variations, between H and D, is used
-for each time interval. Each observatory has an adopted scale based on the
-distribution of magnetic activity observed. This scale is used to translate the
-K variation of the data onto a 0 to 9 scale.
+the data. The larger of the two K variations, from H and D is used for each time
+interval. Each observatory has an adopted scale, which is a multiple of the
+Niemegk observatory’s scale shown below. This scale is used to translate the K
+variation nano-Tesla (nT) value of the data onto a 0 to 9 integer scale. The
+“Range” represents this nT cutoff for each “KValue”.
+
+    Range:    0     5     10    20    40    70    120   200   330   500
+    KValue:   0     1     2     3     4     5     6     7     8     9
 
 
 ## Practical Considerations ##
