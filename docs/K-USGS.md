@@ -59,7 +59,8 @@ Mean Hourly Values (MHVs) for a single day plus the last 2 MHVs of the previous
 day and the first 2 MHVs of the following day. This is required for each UTC
 calendar day in the desired data range. In order to get a good representative
 curve of the magnetic activity, some data points should be excluded from
-calculations. These exclusions are:
+calculations. Any MHVs that are excluded, or don't exist are replaced with a
+daily or monthly mean as approprate. The exclusion criteria are:
 * MHVs containing minute values having an extreme range.
 * MHVs that fall in the tails of the monthly MHV distribution.
 TODO: define "extreme".
