@@ -62,6 +62,8 @@ curve of the magnetic activity, some data points should be excluded from
 calculations. These exclusions are:
 * MHVs containing minute values having an extreme range.
 * MHVs that fall in the tails of the monthly MHV distribution.
+TODO: define "extreme".
+TODO: define "tails of the distribution"
 
 ### SR Curve ###
 
