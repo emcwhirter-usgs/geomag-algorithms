@@ -43,7 +43,7 @@ In general, the K-USGS algorithm consists of these steps:
  1. Eliminate any 1-Minute Values and Mean Hourly Values that fall outside of
     acceptable statistical limits.
  2. Create daily SR-curves for every day in the selected data window.
- 3. Remove the SR-curve to find the K variation of the data.
+ 3. Subtract the SR-curve to find the K variation of the data.
  4. Translate the K variation on a 0 to 9 scale.
 
 > Subset of USGS data used for testing in 2010 included:
