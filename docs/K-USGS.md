@@ -81,13 +81,17 @@ spline is then computed with the intercept points of the consecutive lines.
 
 The K variation is what remains in the data when the SR-curve is subtracted from
 the data. The larger of the two K variations, from H and D is used for each time
-interval. Each observatory has an adopted scale, which is a multiple of the
+interval. A time interval is 1 of 8 3-hour windows for every day beginning at
+UTC 00:00. Each observatory has an adopted scale, which is a multiple of the
 Niemegk observatory’s scale shown below. This scale is used to translate the K
 variation nano-Tesla (nT) value of the data onto a 0 to 9 integer scale. The
 “Range” represents this nT cutoff for each “KValue”.
 
     Range:    0     5     10    20    40    70    120   200   330   500
     KValue:   0     1     2     3     4     5     6     7     8     9
+
+For the Niemegk observatory, this means that a K variation below 5nT yields K=0,
+a K variation below 10nT yields K=1 and so on.
 
 
 ## Practical Considerations ##
