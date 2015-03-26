@@ -34,10 +34,10 @@ The USGS has been producing digital K-Indices since 1979. The K-USGS algorithm
 was one of many written to attempt to simulate the previously used hand-scaled
 process as closely as possible, and was one of the four to be officially
 accepted by an IAGA Working Group V during the Vienna IUGG General Assembly in
-1991. This method is described in "[Wilson (1987)](#wilson-1987). The algorithm
-was tested and found acceptable in 1990 using IAGA WG-5 data. It was tested
-again in 2010 using a subset of USGS data, and was found to still be acceptable
-for producing K-Indices.
+1991[Menvielle (1995)](#menvielle-1995). This method is described in
+"[Wilson (1987)](#wilson-1987). The algorithm was tested and found acceptable
+in 1990 using IAGA WG-5 data. It was tested again in 2010 using a subset of
+USGS data, and was found to still be acceptable for producing K-Indices.
 
 In general, the K-USGS algorithm consists of these steps:
  1. Eliminate any 1-Minute Values and Mean Hourly Values that fall outside of
@@ -121,6 +121,10 @@ Bartels, J., Heck, N.H., and Johnston, H.F. (1939),
 
 Mayaud, P.N., Atlas of indices K, JAGA Bulletin, 21, 113pp., 1957
   <a name="mayaud-1957"></a>
+
+Menvielle, N., 1995,
+  [Computer production of K indices: review and comparison of methods](http://gji.oxfordjournals.org/content/123/3/866.short)
+  <a name="menvielle-1995"></a>
 
 Wilson, L.R. (1987),
   [An Evaluation of Digitially Derived K-Indices](https://www.jstage.jst.go.jp/article/jgg1949/39/2/39_2_97/_article),
