@@ -2,6 +2,11 @@
 
 from os import path
 import sys
+<<<<<<< HEAD
+=======
+import numpy as np # for K algorithm
+
+>>>>>>> Update starttime and endtime when running K algorithm to use full calendar days.
 # ensure geomag is on the path before importing
 try:
     import geomagio  # noqa (tells linter to ignore this line.)
