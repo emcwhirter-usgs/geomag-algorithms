@@ -66,14 +66,13 @@ def clean_MHVs(timeseries):
     """
     # type = <class 'obspy.core.trace.Trace'>
     trace = timeseries.select(channel='H')[0]
-    print str(trace) + "\n"
 
     # type = <'numpy.ndarray'>
     H = trace.data
 
-    numMinutes = H.size
+    totalMinutes = H.size
     # This algorithm operates on entire calendar days of 1-Minute values.
-    if (numMinutes % MINUTESPERDAY) != 0:
+    if (totalMinutes % MINUTESPERDAY) != 0:
         raise TimeseriesFactoryException(
                 'Entire calendar days of minute data required for K.')
 
@@ -90,10 +89,12 @@ def clean_MHVs(timeseries):
     # type = <type 'list'>
     days = get_days(starttime, endtime)
 
-    i = 0
     # type = <type 'numpy.timedelta64'>
     oneDay = numpy.timedelta64(1, 'D')
     oneMinute = numpy.timedelta64(1, 'm')
+
+    i = 0
+    dailyStats = []
     for day in days:
         begin = numpy.datetime64(starttime) + i * oneDay
         begin = UTC.UTCDateTime(str(begin))
@@ -101,34 +102,57 @@ def clean_MHVs(timeseries):
         end = numpy.datetime64(begin) + oneDay - oneMinute
         end = UTC.UTCDateTime(str(end))
 
-        daily_stats(day, trace.slice(begin, end))
+        dailyStats.append(daily_stats(day, trace.slice(begin, end)))
+        print dailyStats
+        print ""
         i += 1
+
     # for day in days:
     #     hours.append(get_hours(day))
 
     # print "H Trace:"
     # print H
-    print "Total # of Minutes    : " + str(numMinutes)
+    print "Total # of Minutes    : " + str(totalMinutes)
     print "Average of all Minutes: " + str(average) + "nT"
     print "Std Dev of all Minutes: " + str(stdDev)
     print "Range of all Minutes  : " + str(rangeMinutes) + "nT"
 
 def daily_stats(day, trace):
-    print "  Daily stats for " + str(day)
-    print "    " + str(trace) + "\n"
+    # print "  Daily stats for " + str(day)
+    # print "    " + str(trace)
     H = trace.data
 
-    # numMinutes = H.length
-    # average = numpy.nanmean(H)
-    # stdDev = numpy.nanstd(H)
-    # minMinute = numpy.amin(H)
-    # maxMinute = numpy.amax(H)
-    # rangeMinutes = maxMinute - minMinute
+    dailyMinutes = H.size
+    if dailyMinutes != MINUTESPERDAY:
+        raise TimeseriesFactoryException(
+                'Entire calendar days of minute data required for K.')
 
-    # print "    Number of Minutes:        " + str(numMinutes)
-    # print "    Average of day's Minutes: " + str(average) + "nT"
-    # print "    Std Dev of day's Minutes: " + str(stdDev)
-    # print "    Range of day's Minutes:   " + str(rangeMinutes) + "nT"
+    dailyAverage = numpy.nanmean(H)
+    dailyStdDev = numpy.nanstd(H)
+    minMinute = numpy.amin(H)
+    maxMinute = numpy.amax(H)
+    dailyRange = maxMinute - minMinute
+
+    # print "    Number of Minutes:        " + str(dailyMinutes)
+    # print "    Average of day's Minutes: " + str(dailyAverage) + "nT"
+    # print "    Std Dev of day's Minutes: " + str(dailyStdDev)
+    # print "    Range of day's Minutes:   " + str(dailyRange) + "nT"
+    # print "\n"
+    return dailyAverage, dailyStdDev, dailyRange
+
+def get_hours(day):
+    """
+        Get Mean Hourly Values (MHVs).
+    """
+    hours = []
+    delta = numpy.timedelta64(1, 'h')
+    date = numpy.datetime64(day)
+
+    for i in range(0, 24):
+        hour = date + i*delta
+        hours.append(hour)
+
+    return hours
 
 def get_days(starttime, endtime):
     """
@@ -166,17 +190,3 @@ def get_days(starttime, endtime):
         # move to next day
         day = obspy.core.UTCDateTime(day.timestamp + 86400)
     return days
-
-def get_hours(day):
-    """
-        Get Mean Hourly Values (MHVs).
-    """
-    hours = []
-    delta = numpy.timedelta64(1, 'h')
-    date = numpy.datetime64(day)
-
-    for i in range(0, 24):
-        hour = date + i*delta
-        hours.append(hour)
-
-    return hours
