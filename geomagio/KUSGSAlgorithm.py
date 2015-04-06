@@ -103,10 +103,12 @@ def clean_MHVs(timeseries):
         end = UTC.UTCDateTime(str(end))
 
         dailyStats.append(daily_stats(day, trace.slice(begin, end)))
-        print dailyStats
-        print ""
         i += 1
 
+    for stat in dailyStats:
+        print "  Daily Average: " + str(stat[0])
+        print "  Daily Std Dev: " + str(stat[1])
+        print "  Daily Range  : " + str(stat[2]) + "\n"
     # for day in days:
     #     hours.append(get_hours(day))
 
@@ -116,29 +118,6 @@ def clean_MHVs(timeseries):
     print "Average of all Minutes: " + str(average) + "nT"
     print "Std Dev of all Minutes: " + str(stdDev)
     print "Range of all Minutes  : " + str(rangeMinutes) + "nT"
-
-def daily_stats(day, trace):
-    # print "  Daily stats for " + str(day)
-    # print "    " + str(trace)
-    H = trace.data
-
-    dailyMinutes = H.size
-    if dailyMinutes != MINUTESPERDAY:
-        raise TimeseriesFactoryException(
-                'Entire calendar days of minute data required for K.')
-
-    dailyAverage = numpy.nanmean(H)
-    dailyStdDev = numpy.nanstd(H)
-    minMinute = numpy.amin(H)
-    maxMinute = numpy.amax(H)
-    dailyRange = maxMinute - minMinute
-
-    # print "    Number of Minutes:        " + str(dailyMinutes)
-    # print "    Average of day's Minutes: " + str(dailyAverage) + "nT"
-    # print "    Std Dev of day's Minutes: " + str(dailyStdDev)
-    # print "    Range of day's Minutes:   " + str(dailyRange) + "nT"
-    # print "\n"
-    return dailyAverage, dailyStdDev, dailyRange
 
 def get_hours(day):
     """
@@ -153,6 +132,24 @@ def get_hours(day):
         hours.append(hour)
 
     return hours
+
+def daily_stats(day, trace):
+    H = trace.data
+
+    dailyMinutes = H.size
+    if dailyMinutes != MINUTESPERDAY:
+        raise TimeseriesFactoryException(
+                'Entire calendar days of minute data required for K.')
+
+    dailyAverage = numpy.nanmean(H)
+    dailyStdDev = numpy.nanstd(H)
+    minMinute = numpy.amin(H)
+    maxMinute = numpy.amax(H)
+    dailyRange = maxMinute - minMinute
+
+    # TODO Consider using key:value pairs here
+    return dailyAverage, dailyStdDev, dailyRange
+
 
 def get_days(starttime, endtime):
     """
