@@ -8,6 +8,7 @@ import obspy.core.utcdatetime as UTC
 from Algorithm import Algorithm
 from geomagio import TimeseriesFactoryException
 
+MINUTESPERHOUR = 60
 MINUTESPERDAY = 1440  # 24h * 60min
 
 class KUSGSAlgorithm(Algorithm):
@@ -82,7 +83,8 @@ def clean_MHVs(timeseries):
     maxMinute = numpy.amax(H)
     rangeMinutes = maxMinute - minMinute
 
-    # hours = []
+    hours = []
+
     # type = <class 'obspy.core.utcdatetime.UTCDateTime'>
     starttime = trace.stats.starttime
     endtime = trace.stats.endtime
@@ -92,46 +94,100 @@ def clean_MHVs(timeseries):
     # type = <type 'numpy.timedelta64'>
     oneDay = numpy.timedelta64(1, 'D')
     oneMinute = numpy.timedelta64(1, 'm')
+    oneHour = numpy.timedelta64(1, 'h')
 
     i = 0
     dailyStats = []
+    hoursList = []
     for day in days:
         begin = numpy.datetime64(starttime) + i * oneDay
         begin = UTC.UTCDateTime(str(begin))
+        i += 1
 
         end = numpy.datetime64(begin) + oneDay - oneMinute
         end = UTC.UTCDateTime(str(end))
 
         dailyStats.append(daily_stats(day, trace.slice(begin, end)))
-        i += 1
 
-    for stat in dailyStats:
-        print "  Daily Average: " + str(stat[0])
-        print "  Daily Std Dev: " + str(stat[1])
-        print "  Daily Range  : " + str(stat[2]) + "\n"
-    # for day in days:
-    #     hours.append(get_hours(day))
+        hoursList.append(get_hours(day))
 
-    # print "H Trace:"
-    # print H
+    hourlyStats = []
+    for day in hoursList:
+        for hour in day:
+            begin = numpy.datetime64(hour)
+            begin = UTC.UTCDateTime(str(begin))
+
+            end = numpy.datetime64(begin) + oneHour - oneMinute
+            end = UTC.UTCDateTime(str(end))
+
+            hourlyStats.append(hourly_stats(hour, trace.slice(begin, end)))
+
+    print_days(dailyStats)
+    #print_hours(hourlyStats)
+
     print "Total # of Minutes    : " + str(totalMinutes)
     print "Average of all Minutes: " + str(average) + "nT"
     print "Std Dev of all Minutes: " + str(stdDev)
     print "Range of all Minutes  : " + str(rangeMinutes) + "nT"
+
+def print_days(dailyStats):
+    ### Example output ###
+    #  Day          : 2013-12-31T00:00:00.000000Z
+    #  Daily Average: 20894.2173562
+    #  Daily Std Dev: 9.39171243572
+    #  Daily Range  : 44.319
+
+    for stat in dailyStats:
+        print "  Day          : " + str(stat[0])
+        print "  Daily Average: " + str(stat[1])
+        print "  Daily Std Dev: " + str(stat[2])
+        print "  Daily Range  : " + str(stat[3]) + "\n"
+
+def print_hours(hourlyStats):
+    ### Example output ###
+    #    Hour          : 2014-01-02T17:00:00.000000Z
+    #    Hourly Average: 20855.7571167
+    #    Hourly Std Dev: 10.1907743067
+    #    Hourly Range  : 36.883
+
+    for stat in hourlyStats:
+        print "    Hour          : " + str(stat[0])
+        print "    Hourly Average: " + str(stat[1])
+        print "    Hourly Std Dev: " + str(stat[2])
+        print "    Hourly Range  : " + str(stat[3]) + "\n"
 
 def get_hours(day):
     """
         Get Mean Hourly Values (MHVs).
     """
     hours = []
-    delta = numpy.timedelta64(1, 'h')
+    oneHour = numpy.timedelta64(1, 'h')
     date = numpy.datetime64(day)
 
     for i in range(0, 24):
-        hour = date + i*delta
+        hour = date + i * oneHour
+        hour = UTC.UTCDateTime(str(hour))
+
         hours.append(hour)
 
     return hours
+
+def hourly_stats(hour, trace):
+    H = trace.data
+
+    hourlyMinutes = H.size
+    if hourlyMinutes != MINUTESPERHOUR:
+        raise TimeseriesFactoryException(
+                '1 Hour should have 60 minutes.')
+
+    hourlyAverage = numpy.nanmean(H)
+    hourlyStdDev = numpy.nanstd(H)
+    minMinute = numpy.amin(H)
+    maxMinute = numpy.amax(H)
+    hourlyRange = maxMinute - minMinute
+
+    # TODO Consider using key:value pairs here
+    return hour, hourlyAverage, hourlyStdDev, hourlyRange
 
 def daily_stats(day, trace):
     H = trace.data
@@ -148,7 +204,7 @@ def daily_stats(day, trace):
     dailyRange = maxMinute - minMinute
 
     # TODO Consider using key:value pairs here
-    return dailyAverage, dailyStdDev, dailyRange
+    return day, dailyAverage, dailyStdDev, dailyRange
 
 
 def get_days(starttime, endtime):
@@ -186,4 +242,5 @@ def get_days(starttime, endtime):
             break
         # move to next day
         day = obspy.core.UTCDateTime(day.timestamp + 86400)
+
     return days
