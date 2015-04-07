@@ -238,9 +238,10 @@ def print_hours(hourlyStats):
     #    Hourly Average: 20855.7571167
     #    Hourly Std Dev: 10.1907743067
     #    Hourly Range  : 36.883
-
-    for stat in hourlyStats:
-        print "    Hour          : " + str(stat[0])
-        print "    Hourly Average: " + str(stat[1])
-        print "    Hourly Std Dev: " + str(stat[2])
-        print "    Hourly Range  : " + str(stat[3]) + "\n"
+    for hour in hourlyStats:
+        stats = hour.stats
+        statistics = stats.statistics
+        print "    Hour          : " + str(stats.starttime)
+        print "    Hourly Average: " + str(statistics['average'])
+        print "    Hourly Std Dev: " + str(statistics['standarddeviation'])
+        print "    Hourly Range  : " + str(statistics['maximum'] - statistics['minimum']) + "\n"
