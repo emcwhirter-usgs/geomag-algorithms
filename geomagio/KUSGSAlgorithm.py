@@ -89,20 +89,16 @@ def clean_MHVs(timeseries):
     oneMinute = numpy.timedelta64(1, 'm')
     oneHour = numpy.timedelta64(1, 'h')
 
-    i = 0
     dailyStats = []
     hoursList = []
     for day in days:
-        print day
-        begin = numpy.datetime64(starttime) + i * oneDay
-        print begin
-        begin = UTC.UTCDateTime(str(begin))
-        i += 1
+        # begin = UTC.UTCDateTime(str(day))
+        begin = day
 
-        end = numpy.datetime64(begin) + oneDay - oneMinute
+        end = numpy.datetime64(day) + oneDay - oneMinute
         end = UTC.UTCDateTime(str(end))
 
-        thisDay = trace.slice(begin, end)
+        thisDay = trace.slice(day, end)
         if thisDay.stats.npts != MINUTESPERDAY:
             raise TimeseriesFactoryException(
                     'Entire calendar days of minute data required for K.')
