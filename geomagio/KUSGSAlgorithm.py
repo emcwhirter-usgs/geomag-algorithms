@@ -84,23 +84,24 @@ def clean_MHVs(timeseries):
     oneHour = numpy.timedelta64(1, 'h')
 
     dailyStats = []
+    daily_slices(days, dailyStats, trace)
+
     hours = []
-    for day in days:
-        end = numpy.datetime64(day) + oneDay - oneMinute
-        end = UTC.UTCDateTime(str(end))
-
-        thisDay = trace.slice(day, end)
-        if thisDay.stats.npts != MINUTESPERDAY:
-            raise TimeseriesFactoryException(
-                    'Entire calendar days of minute data required for K.')
-
-        statistics(thisDay)
-        dailyStats.append(thisDay)
-
     for day in days:
         hours.append(get_hours(day))
 
     hourlyStats = []
+    hourly_slices(hours, hourlyStats, trace)
+
+    print_days(dailyStats)
+    # print_hours(hourlyStats)
+
+    print_all(trace.stats)
+
+def hourly_slices(hours, hourlyStats, trace):
+    oneMinute = numpy.timedelta64(1, 'm')
+    oneHour = numpy.timedelta64(1, 'h')
+
     for day in hours:
         for hour in day:
             end = numpy.datetime64(hour) + oneHour - oneMinute
@@ -115,11 +116,21 @@ def clean_MHVs(timeseries):
             statistics(thisHour)
             hourlyStats.append(thisHour)
 
-    print_days(dailyStats)
-    # print_hours(hourlyStats)
+def daily_slices(days, dailyStats, trace):
+    oneDay = numpy.timedelta64(1, 'D')
+    oneMinute = numpy.timedelta64(1, 'm')
 
-    print_all(trace.stats)
+    for day in days:
+        end = numpy.datetime64(day) + oneDay - oneMinute
+        end = UTC.UTCDateTime(str(end))
 
+        thisDay = trace.slice(day, end)
+        if thisDay.stats.npts != MINUTESPERDAY:
+            raise TimeseriesFactoryException(
+                    'Entire calendar days of minute data required for K.')
+
+        statistics(thisDay)
+        dailyStats.append(thisDay)
 
 def get_hours(day):
     """
