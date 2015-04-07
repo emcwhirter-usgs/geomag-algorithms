@@ -110,7 +110,7 @@ def clean_MHVs(timeseries):
             raise TimeseriesFactoryException(
                     'Entire calendar days of minute data required for K.')
 
-        dailyStats.append(daily_stats(day, thisDay))
+        dailyStats.append(statistics(day, thisDay))
 
         hoursList.append(get_hours(day))
 
@@ -159,26 +159,14 @@ def get_hours(day):
 def statistics(time, trace):
     H = trace.data
 
-    hourlyAverage = numpy.nanmean(H)
-    hourlyStdDev = numpy.nanstd(H)
+    average = numpy.nanmean(H)
+    standardDeviation = numpy.nanstd(H)
     minMinute = numpy.amin(H)
     maxMinute = numpy.amax(H)
-    hourlyRange = maxMinute - minMinute
+    Range = maxMinute - minMinute
 
     # TODO Add these values to a 'statistics' object on the trace.stats
-    return time, hourlyAverage, hourlyStdDev, hourlyRange
-
-def daily_stats(time, trace):
-    H = trace.data
-
-    dailyAverage = numpy.nanmean(H)
-    dailyStdDev = numpy.nanstd(H)
-    minMinute = numpy.amin(H)
-    maxMinute = numpy.amax(H)
-    dailyRange = maxMinute - minMinute
-
-    return time, dailyAverage, dailyStdDev, dailyRange
-
+    return time, average, standardDeviation, Range
 
 def get_days(starttime, endtime):
     """
