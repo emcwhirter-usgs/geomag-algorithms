@@ -67,14 +67,12 @@ def clean_MHVs(timeseries):
     """
     # type = <class 'obspy.core.trace.Trace'>
     trace = timeseries.select(channel='H')[0]
-    print trace.stats
     statistics(trace)
-    print trace.stats
-    print ""
-    # type = <'numpy.ndarray'>
-    H = trace.data
 
-    totalMinutes = H.size
+    # type = <'numpy.ndarray'>
+    # H = trace.data
+
+    totalMinutes = trace.stats.npts
     # This algorithm operates on entire calendar days of 1-Minute values.
     if (totalMinutes % MINUTESPERDAY) != 0:
         raise TimeseriesFactoryException(
@@ -95,7 +93,9 @@ def clean_MHVs(timeseries):
     dailyStats = []
     hoursList = []
     for day in days:
+        print day
         begin = numpy.datetime64(starttime) + i * oneDay
+        print begin
         begin = UTC.UTCDateTime(str(begin))
         i += 1
 
@@ -212,6 +212,8 @@ def get_days(starttime, endtime):
 
 def print_all(stats):
     statistics = stats.statistics
+    print "Start Time            : " + str(stats.starttime)
+    print "End Time              : " + str(stats.endtime)
     print "Total # of Minutes    : " + str(stats.npts)
     print "Average of all Minutes: " + str(statistics['average']) + "nT"
     print "Std Dev of all Minutes: " + str(statistics['standarddeviation'])
