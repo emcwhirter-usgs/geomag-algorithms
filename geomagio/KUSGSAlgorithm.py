@@ -67,7 +67,10 @@ def clean_MHVs(timeseries):
     """
     # type = <class 'obspy.core.trace.Trace'>
     trace = timeseries.select(channel='H')[0]
-
+    print trace.stats
+    statistics(trace)
+    print trace.stats
+    print ""
     # type = <'numpy.ndarray'>
     H = trace.data
 
@@ -76,12 +79,6 @@ def clean_MHVs(timeseries):
     if (totalMinutes % MINUTESPERDAY) != 0:
         raise TimeseriesFactoryException(
                 'Entire calendar days of minute data required for K.')
-
-    average = numpy.nanmean(H)
-    stdDev = numpy.nanstd(H)
-    minMinute = numpy.amin(H)
-    maxMinute = numpy.amax(H)
-    rangeMinutes = maxMinute - minMinute
 
     # type = <class 'obspy.core.utcdatetime.UTCDateTime'>
     starttime = trace.stats.starttime
@@ -110,11 +107,8 @@ def clean_MHVs(timeseries):
             raise TimeseriesFactoryException(
                     'Entire calendar days of minute data required for K.')
 
-        # dailyStats.append(statistics(day, thisDay))
         statistics(thisDay)
-        # print thisDay.stats
         dailyStats.append(thisDay)
-        # print thisDay.stats
 
         hoursList.append(get_hours(day))
 
@@ -133,17 +127,13 @@ def clean_MHVs(timeseries):
                 raise TimeseriesFactoryException(
                         '1 Hour should have 60 minutes.')
 
-            # hourlyStats.append(statistics(hour, thisHour))
             statistics(thisHour)
             hourlyStats.append(thisHour)
 
     print_days(dailyStats)
     # print_hours(hourlyStats)
 
-    print "Total # of Minutes    : " + str(totalMinutes)
-    print "Average of all Minutes: " + str(average) + "nT"
-    print "Std Dev of all Minutes: " + str(stdDev)
-    print "Range of all Minutes  : " + str(rangeMinutes) + "nT"
+    print_all(trace.stats)
 
 
 def get_hours(day):
@@ -163,6 +153,10 @@ def get_hours(day):
     return hours
 
 def statistics(trace):
+    """
+        Calculate average, standard deviation, minimum and maximum on given
+        trace, add them to a 'statistics' object and attach them to the trace.
+    """
     H = trace.data
 
     average = numpy.nanmean(H)
@@ -177,8 +171,6 @@ def statistics(trace):
         'minimum': minimum,
         'maximum': maximum
     }
-    # TODO don't return these, use the trace.stats.statistics instead
-    return average, standardDeviation, Range
 
 def get_days(starttime, endtime):
     """
@@ -217,6 +209,13 @@ def get_days(starttime, endtime):
         day = obspy.core.UTCDateTime(day.timestamp + 86400)
 
     return days
+
+def print_all(stats):
+    statistics = stats.statistics
+    print "Total # of Minutes    : " + str(stats.npts)
+    print "Average of all Minutes: " + str(statistics['average']) + "nT"
+    print "Std Dev of all Minutes: " + str(statistics['standarddeviation'])
+    print "Range of all Minutes  : " + str(statistics['maximum'] - statistics['minimum']) + "nT"
 
 def print_days(dailyStats):
     ### Example output ###
