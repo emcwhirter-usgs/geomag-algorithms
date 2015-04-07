@@ -110,7 +110,11 @@ def clean_MHVs(timeseries):
             raise TimeseriesFactoryException(
                     'Entire calendar days of minute data required for K.')
 
-        dailyStats.append(statistics(day, thisDay))
+        # dailyStats.append(statistics(day, thisDay))
+        statistics(thisDay)
+        # print thisDay.stats
+        dailyStats.append(thisDay)
+        # print thisDay.stats
 
         hoursList.append(get_hours(day))
 
@@ -129,7 +133,9 @@ def clean_MHVs(timeseries):
                 raise TimeseriesFactoryException(
                         '1 Hour should have 60 minutes.')
 
-            hourlyStats.append(statistics(hour, thisHour))
+            # hourlyStats.append(statistics(hour, thisHour))
+            statistics(thisHour)
+            hourlyStats.append(thisHour)
 
     print_days(dailyStats)
     # print_hours(hourlyStats)
@@ -156,7 +162,7 @@ def get_hours(day):
 
     return hours
 
-def statistics(time, trace):
+def statistics(trace):
     H = trace.data
 
     average = numpy.nanmean(H)
@@ -171,10 +177,8 @@ def statistics(time, trace):
         'minimum': minimum,
         'maximum': maximum
     }
-    print trace.stats
-    print ""
-    # TODO Add these values to a 'statistics' object on the trace.stats
-    return time, average, standardDeviation, Range
+    # TODO don't return these, use the trace.stats.statistics instead
+    return average, standardDeviation, Range
 
 def get_days(starttime, endtime):
     """
@@ -220,12 +224,13 @@ def print_days(dailyStats):
     #  Daily Average: 20894.2173562
     #  Daily Std Dev: 9.39171243572
     #  Daily Range  : 44.319
-
-    for stat in dailyStats:
-        print "  Day          : " + str(stat[0])
-        print "  Daily Average: " + str(stat[1])
-        print "  Daily Std Dev: " + str(stat[2])
-        print "  Daily Range  : " + str(stat[3]) + "\n"
+    for day in dailyStats:
+        stats = day.stats
+        statistics = stats.statistics
+        print "  Day          : " + str(stats.starttime)
+        print "  Daily Average: " + str(statistics['average'])
+        print "  Daily Std Dev: " + str(statistics['standarddeviation'])
+        print "  Daily Range  : " + str(statistics['maximum'] - statistics['minimum']) + "\n"
 
 def print_hours(hourlyStats):
     ### Example output ###
