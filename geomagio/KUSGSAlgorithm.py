@@ -10,6 +10,9 @@ from geomagio import TimeseriesFactoryException
 
 MINUTESPERHOUR = 60
 MINUTESPERDAY = 1440  # 24h * 60min
+ONEDAY = numpy.timedelta64(1, 'D')
+ONEMINUTE = numpy.timedelta64(1, 'm')
+ONEHOUR = numpy.timedelta64(1, 'h')
 
 class KUSGSAlgorithm(Algorithm):
     """
@@ -78,11 +81,6 @@ def clean_MHVs(timeseries):
     # type = <type 'list'>
     days = get_days(trace.stats.starttime, trace.stats.endtime)
 
-    # type = <type 'numpy.timedelta64'>
-    oneDay = numpy.timedelta64(1, 'D')
-    oneMinute = numpy.timedelta64(1, 'm')
-    oneHour = numpy.timedelta64(1, 'h')
-
     dailyStats = []
     daily_slices(days, dailyStats, trace)
 
@@ -99,12 +97,9 @@ def clean_MHVs(timeseries):
     print_all(trace.stats)
 
 def hourly_slices(hours, hourlyStats, trace):
-    oneMinute = numpy.timedelta64(1, 'm')
-    oneHour = numpy.timedelta64(1, 'h')
-
     for day in hours:
         for hour in day:
-            end = numpy.datetime64(hour) + oneHour - oneMinute
+            end = numpy.datetime64(hour) + ONEHOUR - ONEMINUTE
             # TODO Look into using the raw time value instead of a string
             end = UTC.UTCDateTime(str(end))
 
@@ -117,11 +112,8 @@ def hourly_slices(hours, hourlyStats, trace):
             hourlyStats.append(thisHour)
 
 def daily_slices(days, dailyStats, trace):
-    oneDay = numpy.timedelta64(1, 'D')
-    oneMinute = numpy.timedelta64(1, 'm')
-
     for day in days:
-        end = numpy.datetime64(day) + oneDay - oneMinute
+        end = numpy.datetime64(day) + ONEDAY - ONEMINUTE
         end = UTC.UTCDateTime(str(end))
 
         thisDay = trace.slice(day, end)
@@ -137,11 +129,10 @@ def get_hours(day):
         Get Mean Hourly Values (MHVs).
     """
     hours = []
-    oneHour = numpy.timedelta64(1, 'h')
     date = numpy.datetime64(day)
 
     for i in range(0, 24):
-        hour = date + i * oneHour
+        hour = date + i * ONEHOUR
         hour = UTC.UTCDateTime(str(hour))
 
         hours.append(hour)
