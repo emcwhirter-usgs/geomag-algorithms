@@ -161,10 +161,18 @@ def statistics(time, trace):
 
     average = numpy.nanmean(H)
     standardDeviation = numpy.nanstd(H)
-    minMinute = numpy.amin(H)
-    maxMinute = numpy.amax(H)
-    Range = maxMinute - minMinute
+    minimum = numpy.amin(H)
+    maximum = numpy.amax(H)
+    Range = maximum - minimum
 
+    trace.stats.statistics = {
+        'average': average,
+        'standarddeviation': standardDeviation,
+        'minimum': minimum,
+        'maximum': maximum
+    }
+    print trace.stats
+    print ""
     # TODO Add these values to a 'statistics' object on the trace.stats
     return time, average, standardDeviation, Range
 
