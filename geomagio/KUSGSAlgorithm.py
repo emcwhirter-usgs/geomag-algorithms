@@ -83,8 +83,6 @@ def clean_MHVs(timeseries):
     maxMinute = numpy.amax(H)
     rangeMinutes = maxMinute - minMinute
 
-    hours = []
-
     # type = <class 'obspy.core.utcdatetime.UTCDateTime'>
     starttime = trace.stats.starttime
     endtime = trace.stats.endtime
@@ -118,43 +116,24 @@ def clean_MHVs(timeseries):
             begin = UTC.UTCDateTime(str(begin))
 
             end = numpy.datetime64(begin) + oneHour - oneMinute
+            # TODO Look into using the raw time value instead of a string
             end = UTC.UTCDateTime(str(end))
 
-            hourlyStats.append(hourly_stats(hour, trace.slice(begin, end)))
+            thisHour = trace.slice(begin, end)
+            if thisHour.stats.npts != MINUTESPERHOUR:
+                raise TimeseriesFactoryException(
+                        '1 Hour should have 60 minutes.')
+
+            hourlyStats.append(statistics(hour, thisHour))
 
     print_days(dailyStats)
-    #print_hours(hourlyStats)
+    # print_hours(hourlyStats)
 
     print "Total # of Minutes    : " + str(totalMinutes)
     print "Average of all Minutes: " + str(average) + "nT"
     print "Std Dev of all Minutes: " + str(stdDev)
     print "Range of all Minutes  : " + str(rangeMinutes) + "nT"
 
-def print_days(dailyStats):
-    ### Example output ###
-    #  Day          : 2013-12-31T00:00:00.000000Z
-    #  Daily Average: 20894.2173562
-    #  Daily Std Dev: 9.39171243572
-    #  Daily Range  : 44.319
-
-    for stat in dailyStats:
-        print "  Day          : " + str(stat[0])
-        print "  Daily Average: " + str(stat[1])
-        print "  Daily Std Dev: " + str(stat[2])
-        print "  Daily Range  : " + str(stat[3]) + "\n"
-
-def print_hours(hourlyStats):
-    ### Example output ###
-    #    Hour          : 2014-01-02T17:00:00.000000Z
-    #    Hourly Average: 20855.7571167
-    #    Hourly Std Dev: 10.1907743067
-    #    Hourly Range  : 36.883
-
-    for stat in hourlyStats:
-        print "    Hour          : " + str(stat[0])
-        print "    Hourly Average: " + str(stat[1])
-        print "    Hourly Std Dev: " + str(stat[2])
-        print "    Hourly Range  : " + str(stat[3]) + "\n"
 
 def get_hours(day):
     """
@@ -172,13 +151,8 @@ def get_hours(day):
 
     return hours
 
-def hourly_stats(hour, trace):
+def statistics(time, trace):
     H = trace.data
-
-    hourlyMinutes = H.size
-    if hourlyMinutes != MINUTESPERHOUR:
-        raise TimeseriesFactoryException(
-                '1 Hour should have 60 minutes.')
 
     hourlyAverage = numpy.nanmean(H)
     hourlyStdDev = numpy.nanstd(H)
@@ -186,11 +160,12 @@ def hourly_stats(hour, trace):
     maxMinute = numpy.amax(H)
     hourlyRange = maxMinute - minMinute
 
-    # TODO Consider using key:value pairs here
-    return hour, hourlyAverage, hourlyStdDev, hourlyRange
+    # TODO Add these values to a 'statistics' object on the trace.stats
+    return time, hourlyAverage, hourlyStdDev, hourlyRange
 
 def daily_stats(day, trace):
     H = trace.data
+
 
     dailyMinutes = H.size
     if dailyMinutes != MINUTESPERDAY:
@@ -244,3 +219,29 @@ def get_days(starttime, endtime):
         day = obspy.core.UTCDateTime(day.timestamp + 86400)
 
     return days
+
+def print_days(dailyStats):
+    ### Example output ###
+    #  Day          : 2013-12-31T00:00:00.000000Z
+    #  Daily Average: 20894.2173562
+    #  Daily Std Dev: 9.39171243572
+    #  Daily Range  : 44.319
+
+    for stat in dailyStats:
+        print "  Day          : " + str(stat[0])
+        print "  Daily Average: " + str(stat[1])
+        print "  Daily Std Dev: " + str(stat[2])
+        print "  Daily Range  : " + str(stat[3]) + "\n"
+
+def print_hours(hourlyStats):
+    ### Example output ###
+    #    Hour          : 2014-01-02T17:00:00.000000Z
+    #    Hourly Average: 20855.7571167
+    #    Hourly Std Dev: 10.1907743067
+    #    Hourly Range  : 36.883
+
+    for stat in hourlyStats:
+        print "    Hour          : " + str(stat[0])
+        print "    Hourly Average: " + str(stat[1])
+        print "    Hourly Std Dev: " + str(stat[2])
+        print "    Hourly Range  : " + str(stat[3]) + "\n"
