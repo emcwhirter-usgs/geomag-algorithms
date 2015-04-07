@@ -69,20 +69,14 @@ def clean_MHVs(timeseries):
     trace = timeseries.select(channel='H')[0]
     statistics(trace)
 
-    # type = <'numpy.ndarray'>
-    # H = trace.data
-
     totalMinutes = trace.stats.npts
     # This algorithm operates on entire calendar days of 1-Minute values.
     if (totalMinutes % MINUTESPERDAY) != 0:
         raise TimeseriesFactoryException(
                 'Entire calendar days of minute data required for K.')
 
-    # type = <class 'obspy.core.utcdatetime.UTCDateTime'>
-    starttime = trace.stats.starttime
-    endtime = trace.stats.endtime
     # type = <type 'list'>
-    days = get_days(starttime, endtime)
+    days = get_days(trace.stats.starttime, trace.stats.endtime)
 
     # type = <type 'numpy.timedelta64'>
     oneDay = numpy.timedelta64(1, 'D')
@@ -90,7 +84,7 @@ def clean_MHVs(timeseries):
     oneHour = numpy.timedelta64(1, 'h')
 
     dailyStats = []
-    hoursList = []
+    hours = []
     for day in days:
         end = numpy.datetime64(day) + oneDay - oneMinute
         end = UTC.UTCDateTime(str(end))
@@ -103,10 +97,11 @@ def clean_MHVs(timeseries):
         statistics(thisDay)
         dailyStats.append(thisDay)
 
-        hoursList.append(get_hours(day))
+    for day in days:
+        hours.append(get_hours(day))
 
     hourlyStats = []
-    for day in hoursList:
+    for day in hours:
         for hour in day:
             end = numpy.datetime64(hour) + oneHour - oneMinute
             # TODO Look into using the raw time value instead of a string
@@ -120,8 +115,8 @@ def clean_MHVs(timeseries):
             statistics(thisHour)
             hourlyStats.append(thisHour)
 
-    # print_days(dailyStats)
-    print_hours(hourlyStats)
+    print_days(dailyStats)
+    # print_hours(hourlyStats)
 
     print_all(trace.stats)
 
