@@ -124,9 +124,23 @@ def daily_slices(days, dailyStats, trace):
         statistics(thisDay)
         dailyStats.append(thisDay)
 
+def statistics(trace):
+    """
+        Calculate average, standard deviation, minimum and maximum on given
+        trace, add them to a 'statistics' object and attach them to the trace.
+    """
+    H = trace.data
+
+    trace.stats.statistics = {
+        'average': numpy.nanmean(H),
+        'maximum': numpy.amax(H),
+        'minimum': numpy.amin(H),
+        'standarddeviation': numpy.nanstd(H)
+    }
+
 def get_hours(day):
     """
-        Get Mean Hourly Values (MHVs).
+        Get all of the hours in the given day.
     """
     hours = []
     date = numpy.datetime64(day)
@@ -138,26 +152,6 @@ def get_hours(day):
         hours.append(hour)
 
     return hours
-
-def statistics(trace):
-    """
-        Calculate average, standard deviation, minimum and maximum on given
-        trace, add them to a 'statistics' object and attach them to the trace.
-    """
-    H = trace.data
-
-    average = numpy.nanmean(H)
-    standardDeviation = numpy.nanstd(H)
-    minimum = numpy.amin(H)
-    maximum = numpy.amax(H)
-    Range = maximum - minimum
-
-    trace.stats.statistics = {
-        'average': average,
-        'standarddeviation': standardDeviation,
-        'minimum': minimum,
-        'maximum': maximum
-    }
 
 def get_days(starttime, endtime):
     """
