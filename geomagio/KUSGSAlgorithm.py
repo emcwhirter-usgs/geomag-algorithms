@@ -92,9 +92,6 @@ def clean_MHVs(timeseries):
     dailyStats = []
     hoursList = []
     for day in days:
-        # begin = UTC.UTCDateTime(str(day))
-        begin = day
-
         end = numpy.datetime64(day) + oneDay - oneMinute
         end = UTC.UTCDateTime(str(end))
 
@@ -111,14 +108,11 @@ def clean_MHVs(timeseries):
     hourlyStats = []
     for day in hoursList:
         for hour in day:
-            begin = numpy.datetime64(hour)
-            begin = UTC.UTCDateTime(str(begin))
-
-            end = numpy.datetime64(begin) + oneHour - oneMinute
+            end = numpy.datetime64(hour) + oneHour - oneMinute
             # TODO Look into using the raw time value instead of a string
             end = UTC.UTCDateTime(str(end))
 
-            thisHour = trace.slice(begin, end)
+            thisHour = trace.slice(hour, end)
             if thisHour.stats.npts != MINUTESPERHOUR:
                 raise TimeseriesFactoryException(
                         '1 Hour should have 60 minutes.')
@@ -126,8 +120,8 @@ def clean_MHVs(timeseries):
             statistics(thisHour)
             hourlyStats.append(thisHour)
 
-    print_days(dailyStats)
-    # print_hours(hourlyStats)
+    # print_days(dailyStats)
+    print_hours(hourlyStats)
 
     print_all(trace.stats)
 
