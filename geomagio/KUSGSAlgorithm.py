@@ -114,6 +114,7 @@ def hourly_slices(hours, hourlyStats, trace):
 def daily_slices(days, dailyStats, trace):
     for day in days:
         end = numpy.datetime64(day) + ONEDAY - ONEMINUTE
+        # TODO Look into using the raw time value instead of a string
         end = UTC.UTCDateTime(str(end))
 
         thisDay = trace.slice(day, end)
