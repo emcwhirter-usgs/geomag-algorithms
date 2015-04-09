@@ -78,8 +78,14 @@ def clean_MHVs(timeseries):
         raise TimeseriesFactoryException(
                 'Entire calendar days of minute data required for K.')
 
+    starttime = trace.stats.starttime
+    endtime = trace.stats.endtime
+
+    months = get_months(starttime, endtime)
+    print months
+
     # type = <type 'list'>
-    days = get_days(trace.stats.starttime, trace.stats.endtime)
+    days = get_days(starttime, endtime)
 
     dailyStats = []
     daily_slices(days, dailyStats, trace)
@@ -132,13 +138,26 @@ def statistics(trace):
     """
     H = trace.data
 
-    # Ignoring any NaN's for these calculations.
-    trace.stats.statistics = {
-        'average': numpy.nanmean(H),
-        'maximum': numpy.nanmax(H),
-        'minimum': numpy.nanmin(H),
-        'standarddeviation': numpy.nanstd(H)
-    }
+    mean = numpy.nanmean(H)
+    # Skip some calculations if this entire trace is NaN's.
+    if not (numpy.isnan(mean)):
+        # Ignoring any NaN's for these calculations.
+        trace.stats.statistics = {
+            'average': mean,
+            'maximum': numpy.nanmax(H),
+            'minimum': numpy.nanmin(H),
+            'standarddeviation': numpy.nanstd(H)
+        }
+    else:
+        trace.stats.statistics = {
+            'average': numpy.nan,
+            'maximum': numpy.nan,
+            'minimum': numpy.nan,
+            'standarddeviation': numpy.nan
+        }
+
+def get_months(starttime, endtime):
+    return "get months"
 
 def get_hours(day):
     """
@@ -199,7 +218,7 @@ def print_all(stats):
     print "End Time              : " + str(stats.endtime)
     print "Total # of Minutes    : " + str(stats.npts) + " (" + str(stats.npts/MINUTESPERDAY) + " * " + str(MINUTESPERDAY) + ")"
     print "Average of all Minutes: " + str(statistics['average']) + "nT"
-    print "Std Dev of all Minutes: " + str(statistics['standarddeviation'])
+    print "Std Dev of all Minutes: " + str(statistics['standarddeviation']) + "nT"
     print "Range of all Minutes  : " + str(statistics['maximum'] - statistics['minimum']) + "nT"
 
 def print_days(dailyStats):
