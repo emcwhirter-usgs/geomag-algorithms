@@ -91,7 +91,7 @@ def clean_MHVs(timeseries):
     hourlyStats = []
     hourly_slices(hours, hourlyStats, trace)
 
-    print_days(dailyStats)
+    # print_days(dailyStats)
     # print_hours(hourlyStats)
 
     print_all(trace.stats)
@@ -132,10 +132,11 @@ def statistics(trace):
     """
     H = trace.data
 
+    # Ignoring any NaN's for these calculations.
     trace.stats.statistics = {
         'average': numpy.nanmean(H),
-        'maximum': numpy.amax(H),
-        'minimum': numpy.amin(H),
+        'maximum': numpy.nanmax(H),
+        'minimum': numpy.nanmin(H),
         'standarddeviation': numpy.nanstd(H)
     }
 
@@ -196,7 +197,7 @@ def print_all(stats):
     statistics = stats.statistics
     print "Start Time            : " + str(stats.starttime)
     print "End Time              : " + str(stats.endtime)
-    print "Total # of Minutes    : " + str(stats.npts)
+    print "Total # of Minutes    : " + str(stats.npts) + " (" + str(stats.npts/MINUTESPERDAY) + " * " + str(MINUTESPERDAY) + ")"
     print "Average of all Minutes: " + str(statistics['average']) + "nT"
     print "Std Dev of all Minutes: " + str(statistics['standarddeviation'])
     print "Range of all Minutes  : " + str(statistics['maximum'] - statistics['minimum']) + "nT"
