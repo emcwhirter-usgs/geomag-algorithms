@@ -99,6 +99,7 @@ def clean_MHVs(timeseries):
     hourlyStats = []
     hourly_slices(hours, hourlyStats, trace)
 
+    print_months(monthlyStats)
     # print_days(dailyStats)
     # print_hours(hourlyStats)
 
@@ -279,30 +280,44 @@ def print_all(stats):
     print "Std Dev of all Minutes: " + str(statistics['standarddeviation']) + "nT"
     print "Range of all Minutes  : " + str(statistics['maximum'] - statistics['minimum']) + "nT"
 
+def print_months(monthlyStats):
+    ### Example output ###
+    #  Month          : 2013-12-31T00:00:00.000000Z
+    #  Monthly Average: 20894.2173562
+    #  Monthly Std Dev: 9.39171243572
+    #  Monthly Range  : 44.319
+    for month in monthlyStats:
+        stats = month.stats
+        statistics = stats.statistics
+        print "  Month          : " + str(stats.starttime)
+        print "  Monthly Average: " + str(statistics['average'])
+        print "  Monthly Std Dev: " + str(statistics['standarddeviation'])
+        print "  Monthly Range  : " + str(statistics['maximum'] - statistics['minimum']) + "\n"
+
 def print_days(dailyStats):
     ### Example output ###
-    #  Day          : 2013-12-31T00:00:00.000000Z
-    #  Daily Average: 20894.2173562
-    #  Daily Std Dev: 9.39171243572
-    #  Daily Range  : 44.319
+    #    Day          : 2013-12-31T00:00:00.000000Z
+    #    Daily Average: 20894.2173562
+    #    Daily Std Dev: 9.39171243572
+    #    Daily Range  : 44.319
     for day in dailyStats:
         stats = day.stats
         statistics = stats.statistics
-        print "  Day          : " + str(stats.starttime)
-        print "  Daily Average: " + str(statistics['average'])
-        print "  Daily Std Dev: " + str(statistics['standarddeviation'])
-        print "  Daily Range  : " + str(statistics['maximum'] - statistics['minimum']) + "\n"
+        print "    Day          : " + str(stats.starttime)
+        print "    Daily Average: " + str(statistics['average'])
+        print "    Daily Std Dev: " + str(statistics['standarddeviation'])
+        print "    Daily Range  : " + str(statistics['maximum'] - statistics['minimum']) + "\n"
 
 def print_hours(hourlyStats):
     ### Example output ###
-    #    Hour          : 2014-01-02T17:00:00.000000Z
-    #    Hourly Average: 20855.7571167
-    #    Hourly Std Dev: 10.1907743067
-    #    Hourly Range  : 36.883
+    #      Hour          : 2014-01-02T17:00:00.000000Z
+    #      Hourly Average: 20855.7571167
+    #      Hourly Std Dev: 10.1907743067
+    #      Hourly Range  : 36.883
     for hour in hourlyStats:
         stats = hour.stats
         statistics = stats.statistics
-        print "    Hour          : " + str(stats.starttime)
-        print "    Hourly Average: " + str(statistics['average'])
-        print "    Hourly Std Dev: " + str(statistics['standarddeviation'])
-        print "    Hourly Range  : " + str(statistics['maximum'] - statistics['minimum']) + "\n"
+        print "      Hour          : " + str(stats.starttime)
+        print "      Hourly Average: " + str(statistics['average'])
+        print "      Hourly Std Dev: " + str(statistics['standarddeviation'])
+        print "      Hourly Range  : " + str(statistics['maximum'] - statistics['minimum']) + "\n"
