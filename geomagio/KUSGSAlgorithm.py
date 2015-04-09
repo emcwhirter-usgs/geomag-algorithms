@@ -99,11 +99,57 @@ def clean_MHVs(timeseries):
     hourlyStats = []
     hourly_slices(hours, hourlyStats, trace)
 
+    clean_hours(hourlyStats)
+
     print_months(monthlyStats)
     # print_days(dailyStats)
     # print_hours(hourlyStats)
 
     print_all(trace.stats)
+
+def clean_hours(hourlyStats):
+    print "#####  Cleaning MHVs  #####"
+
+    nanMhvCount = 0
+    month = 0        # Numerical month value so we can see when it changes.
+    monthCount = -1  # Reference the same month until we're done with it.
+    monthCounts = [] # List of months ('month') with counts of NaN's.
+    for hour in hourlyStats:
+        if np.isnan(hour.stats.statistics['average']):
+            nanMhvCount += 1
+
+            if hour.stats.starttime.month != month:
+                month = hour.stats.starttime.month
+                monthCount += 1
+                monthCounts.append([month, 1])
+            else:
+                monthCounts[monthCount][1] += 1
+
+        else:
+            nanMinuteCount = 0
+            for minute in hour:
+                # Keep track of minutes that are NaN for eliminating hours.
+                if np.isnan(minute):
+                    nanMinuteCount += 1
+
+            # If half of the minute values are bad, the entire hour is bad.
+            if nanMinuteCount >= 30:
+                hour.stats.statistics['average'] = np.nan
+                nanMhvCount += 1
+
+                if hour.stats.starttime.month != month:
+                    month = hour.stats.starttime.month
+                    monthCount += 1
+                    monthCounts.append([month, 1])
+                else:
+                    monthCounts[monthCount][1] += 1
+
+    print str(nanMhvCount) + " NaN MHVs found."
+    for mhv in monthCounts:
+        if mhv[1] >= 30:
+            print "A MHV needs to be replaced in month " + str(mhv[0])
+
+    print "#####  MHVs Cleaned  #####\n"
 
 def hourly_slices(hours, hourlyStats, trace):
     for day in hours:
