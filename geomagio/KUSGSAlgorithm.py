@@ -81,11 +81,10 @@ def clean_MHVs(timeseries):
     starttime = trace.stats.starttime
     endtime = trace.stats.endtime
 
-    months = get_months(starttime, endtime)
-    print months
-
     # type = <type 'list'>
     days = get_days(starttime, endtime)
+
+    months = get_months(days)
 
     dailyStats = []
     daily_slices(days, dailyStats, trace)
@@ -156,12 +155,37 @@ def statistics(trace):
             'standarddeviation': numpy.nan
         }
 
-def get_months(starttime, endtime):
-    return "get months"
+def get_months(days):
+    """
+        Get months between (inclusive) starttime and endtime.
+
+        Returns
+        -------
+        array_like
+            List of times, one per month, for all days between and including
+            ``starttime`` and ``endtime``.
+    """
+    months = []
+
+    month = 0
+    for day in days:
+        if day.month != month:
+            date = numpy.datetime64(day)
+            date = UTC.UTCDateTime(str(date))
+            months.append(date)
+            month = day.month
+
+    return months
 
 def get_hours(day):
     """
         Get all of the hours in the given day.
+
+        Returns
+        -------
+        array_like
+            List of times, one per month, for all days between and including
+            ``starttime`` and ``endtime``.
     """
     hours = []
     date = numpy.datetime64(day)
