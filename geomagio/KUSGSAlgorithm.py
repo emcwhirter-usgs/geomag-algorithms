@@ -2,7 +2,7 @@
     Creates K-USGS Indices from H and D time-series data.
 """
 
-import numpy
+import numpy as np
 import obspy.core
 import obspy.core.utcdatetime as UTC
 from Algorithm import Algorithm
@@ -10,9 +10,9 @@ from geomagio import TimeseriesFactoryException
 
 MINUTESPERHOUR = 60
 MINUTESPERDAY = 1440  # 24h * 60min
-ONEDAY = numpy.timedelta64(1, 'D')
-ONEMINUTE = numpy.timedelta64(1, 'm')
-ONEHOUR = numpy.timedelta64(1, 'h')
+ONEDAY = np.timedelta64(1, 'D')
+ONEMINUTE = np.timedelta64(1, 'm')
+ONEHOUR = np.timedelta64(1, 'h')
 
 class KUSGSAlgorithm(Algorithm):
     """
@@ -86,6 +86,9 @@ def clean_MHVs(timeseries):
 
     months = get_months(days)
 
+    monthlyStats = []
+    monthly_slices(months, monthlyStats, trace)
+
     dailyStats = []
     daily_slices(days, dailyStats, trace)
 
@@ -104,7 +107,7 @@ def clean_MHVs(timeseries):
 def hourly_slices(hours, hourlyStats, trace):
     for day in hours:
         for hour in day:
-            end = numpy.datetime64(hour) + ONEHOUR - ONEMINUTE
+            end = np.datetime64(hour) + ONEHOUR - ONEMINUTE
             # TODO Look into using the raw time value instead of a string
             end = UTC.UTCDateTime(str(end))
 
@@ -118,7 +121,7 @@ def hourly_slices(hours, hourlyStats, trace):
 
 def daily_slices(days, dailyStats, trace):
     for day in days:
-        end = numpy.datetime64(day) + ONEDAY - ONEMINUTE
+        end = np.datetime64(day) + ONEDAY - ONEMINUTE
         # TODO Look into using the raw time value instead of a string
         end = UTC.UTCDateTime(str(end))
 
@@ -130,6 +133,37 @@ def daily_slices(days, dailyStats, trace):
         statistics(thisDay)
         dailyStats.append(thisDay)
 
+def monthly_slices(months, monthlyStats, trace):
+    for month in months:
+        # Numpy doesn't know how to add a month...so work-around.
+        date = np.datetime64(month, timezone='UTC')
+        monthNum = int(np.datetime_as_string(date)[5:7])
+
+        year = np.datetime_as_string(date, timezone='UTC')[:5]
+
+        if monthNum < 10:
+            monthNum = "0" + str(monthNum+1)
+        elif monthNum < 12:
+            monthNum = str(monthNum + 1)
+        else:
+            monthNum = str("01")
+            year = str(int(year[:4])+1) + "-"
+
+        end = year + monthNum + "-01T00:00:00.000000Z"
+        end = np.datetime64(end, timezone='UTC')
+
+        endtime = np.datetime_as_string(end - ONEMINUTE, timezone='UTC')
+        # end work-around
+
+        starttime = np.datetime_as_string(date, timezone='UTC')
+
+        starttime = UTC.UTCDateTime(str(starttime))
+        endtime = UTC.UTCDateTime(str(endtime))
+        thisMonth = trace.slice(starttime, endtime)
+
+        statistics(thisMonth)
+        monthlyStats.append(thisMonth)
+
 def statistics(trace):
     """
         Calculate average, standard deviation, minimum and maximum on given
@@ -137,22 +171,22 @@ def statistics(trace):
     """
     H = trace.data
 
-    mean = numpy.nanmean(H)
+    mean = np.nanmean(H)
     # Skip some calculations if this entire trace is NaN's.
-    if not (numpy.isnan(mean)):
+    if not (np.isnan(mean)):
         # Ignoring any NaN's for these calculations.
         trace.stats.statistics = {
             'average': mean,
-            'maximum': numpy.nanmax(H),
-            'minimum': numpy.nanmin(H),
-            'standarddeviation': numpy.nanstd(H)
+            'maximum': np.nanmax(H),
+            'minimum': np.nanmin(H),
+            'standarddeviation': np.nanstd(H)
         }
     else:
         trace.stats.statistics = {
-            'average': numpy.nan,
-            'maximum': numpy.nan,
-            'minimum': numpy.nan,
-            'standarddeviation': numpy.nan
+            'average': np.nan,
+            'maximum': np.nan,
+            'minimum': np.nan,
+            'standarddeviation': np.nan
         }
 
 def get_months(days):
@@ -170,7 +204,7 @@ def get_months(days):
     month = 0
     for day in days:
         if day.month != month:
-            date = numpy.datetime64(day)
+            date = np.datetime64(day)
             date = UTC.UTCDateTime(str(date))
             months.append(date)
             month = day.month
@@ -188,7 +222,7 @@ def get_hours(day):
             ``starttime`` and ``endtime``.
     """
     hours = []
-    date = numpy.datetime64(day)
+    date = np.datetime64(day)
 
     for i in range(0, 24):
         hour = date + i * ONEHOUR
