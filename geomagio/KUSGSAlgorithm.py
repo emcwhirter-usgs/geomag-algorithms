@@ -99,7 +99,7 @@ def clean_MHVs(timeseries):
     hourlyStats = []
     hourly_slices(hours, hourlyStats, trace)
 
-    clean_hours(hourlyStats)
+    clean_hours(hourlyStats, monthlyStats)
 
     print_months(monthlyStats)
     # print_days(dailyStats)
@@ -107,7 +107,12 @@ def clean_MHVs(timeseries):
 
     print_all(trace.stats)
 
-def clean_hours(hourlyStats):
+def clean_hours(hourlyStats, monthlyStats, rangeLimit=2):
+    """
+        rangeLimit as number of standard devations from the monthly mean.
+            Default is 2 standard deviations on top and bottom of the monthly
+            average.
+    """
     print "#####  Cleaning MHVs  #####"
 
     nanMhvCount = 0
@@ -115,11 +120,32 @@ def clean_hours(hourlyStats):
     monthCount = -1  # Reference the same month until we're done with it.
     monthCounts = [] # List of months ('month') with counts of NaN's.
     for hour in hourlyStats:
+        maximum = hour.stats.statistics['maximum']
+        minimum = hour.stats.statistics['minimum']
+        hourRange = maximum - minimum
+
+        hourMonth = hour.stats.starttime.month
+        for monthStat in monthlyStats:
+            if monthStat.stats.starttime.month == hourMonth:
+                stdD = monthStat.stats.statistics['standarddeviation']
+                allowedRange = 2 * stdD * rangeLimit
+
         if np.isnan(hour.stats.statistics['average']):
             nanMhvCount += 1
 
-            if hour.stats.starttime.month != month:
-                month = hour.stats.starttime.month
+            if hourMonth != month:
+                month = hourMonth
+                monthCount += 1
+                monthCounts.append([month, 1])
+            else:
+                monthCounts[monthCount][1] += 1
+
+        elif hourRange > allowedRange:
+            hour.stats.statistics['average'] = np.nan
+            nanMhvCount += 1
+
+            if hourMonth != month:
+                month = hourMonth
                 monthCount += 1
                 monthCounts.append([month, 1])
             else:
