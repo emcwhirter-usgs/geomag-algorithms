@@ -121,7 +121,50 @@ def clean_MHVs(timeseries):
     print_all(trace.stats)
     plot_all(monthBefore, monthlyStats, dayBefore, dailyStats, hourBefore, hourlyStats)
 
-def clean_hours(hourlyStats, monthlyStats, rangeLimit=0.1):
+def clean_hours(hourlyStats, monthlyStats, rangeLimit=2.0):
+    """
+        rangeLimit as number of standard devations from the monthly mean.
+            Default is 2 standard deviations on top and bottom of the monthly
+            average. Decimal values are allowed.
+    """
+    print "#####  Cleaning MHVs  #####"
+
+    nanMhvCount = 0
+    for hour in hourlyStats:
+        maximum = hour.stats.statistics['maximum']
+        minimum = hour.stats.statistics['minimum']
+        hourRange = maximum - minimum
+
+        hourMonth = hour.stats.starttime.month
+        for monthStat in monthlyStats:
+            if monthStat.stats.starttime.month == hourMonth:
+                stdD = monthStat.stats.statistics['standarddeviation']
+                allowedRange = 2 * stdD * rangeLimit
+
+        if np.isnan(hour.stats.statistics['average']):
+            nanMhvCount += 1
+
+        elif hourRange > allowedRange:
+            hour.stats.statistics['average'] = np.nan
+            nanMhvCount += 1
+
+        else:
+            nanMinuteCount = 0
+            for minute in hour:
+                # Keep track of minutes that are NaN for eliminating hours.
+                if np.isnan(minute):
+                    nanMinuteCount += 1
+
+            # If half of the minute values are bad, the entire hour is bad.
+            if nanMinuteCount >= 30:
+                hour.stats.statistics['average'] = np.nan
+                nanMhvCount += 1
+
+    print str(nanMhvCount) + " Total NaN MHVs found."
+
+    print "#####  MHVs Cleaned  #####\n"
+
+def clean_hours_other(hourlyStats, monthlyStats, rangeLimit=2.0):
     """
         rangeLimit as number of standard devations from the monthly mean.
             Default is 2 standard deviations on top and bottom of the monthly
