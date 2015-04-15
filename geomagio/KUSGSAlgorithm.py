@@ -121,10 +121,10 @@ def clean_MHVs(timeseries):
     print_all(trace.stats)
     plot_all(monthBefore, monthlyStats, dayBefore, dailyStats, hourBefore, hourlyStats)
 
-def clean_hours(hourlyStats, monthlyStats, rangeLimit=2.0):
+def clean_hours(hourlyStats, monthlyStats, rangeLimit=0.5):
     """
         rangeLimit as number of standard devations from the monthly mean.
-            Default is 2 standard deviations on top and bottom of the monthly
+            Default is 0.5 standard deviations on top and bottom of the monthly
             average. Decimal values are allowed.
     """
     print "#####  Cleaning MHVs  #####"
@@ -413,154 +413,199 @@ def print_all(stats):
 def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter):
     plot.figure('Average nT Values')
 
-    # Set up all of the plots BEFORE the data has been cleaned.
+    ### Set up all of the plots BEFORE the data has been cleaned. ###
     # Plot MONTHS before cleaning
     means = []
     months = []
+    ranges = []
     for month in monthBefore:
         months.append(month.stats.starttime)
         means.append(month.stats.statistics['average'])
+        ranges.append(month.stats.statistics['maximum']-month.stats.statistics['minimum'])
     months = matplotlib.dates.date2num(months)
 
     plot.subplot(231)
     plot.ylabel('Average (nT)')
     plot.xlabel('Month')
-    plot.plot(months, means, 'bs')
+    plot.errorbar(months, means, ranges, color='cyan', label='Daily mean range')
+    plot.plot(months, means, 'bs', label='Month')
+    # plot.plot_date(months, means, fmt='bs', xdate=True, tz='UTC', label='Month')
+    plot.legend(loc='best')
 
     mean = np.nanmean(means)
-    plot.plot([months[0], months[len(months)-1]],[mean, mean], lw=1)
+    plot.plot([months[0], months[len(months)-1]],[mean, mean], lw=1, label='mean')
 
     stddev = np.nanmax(means) - np.nanmin(means)
     print " Mean: " + str(mean)
     print " StdD: " + str(stddev)
-    lower = mean - 0.1*stddev
-    upper = mean + 0.1*stddev
-    plot.fill_between(months, lower, upper, facecolor='yellow', alpha=0.2)
     lower = mean - 0.5*stddev
     upper = mean + 0.5*stddev
+    plot.fill_between(months, lower, upper, facecolor='red', alpha=0.1)
+    lower = mean - 1.0*stddev
+    upper = mean + 1.0*stddev
     plot.fill_between(months, lower, upper, facecolor='orange', alpha=0.1)
+    lower = mean - 2.0*stddev
+    upper = mean + 2.0*stddev
+    plot.fill_between(months, lower, upper, facecolor='yellow', alpha=0.1)
+    # end Plot MONTHS before cleaning
 
     # Plot DAYS before cleaning
     means = []
     days = []
+    ranges = []
     for day in dayBefore:
         days.append(day.stats.starttime)
         means.append(day.stats.statistics['average'])
+        ranges.append(day.stats.statistics['maximum']-day.stats.statistics['minimum'])
     days = matplotlib.dates.date2num(days)
 
     plot.subplot(232)
     plot.ylabel('Average (nT)')
     plot.xlabel('Day')
-    plot.plot(days, means, 'b^')
+    plot.errorbar(days, means, ranges, color='cyan', label='Hourly mean range')
+    plot.plot(days, means, 'b^', label='Day')
+    plot.legend(loc='best')
 
     mean = np.nanmean(means)
-    plot.plot([days[0], days[len(days)-1]],[mean, mean], lw=1)
+    plot.plot([days[0], days[len(days)-1]],[mean, mean], lw=1, label='mean')
 
     stddev = np.nanmax(means) - np.nanmin(means)
-    lower = mean - 0.1*stddev
-    upper = mean + 0.1*stddev
-    plot.fill_between(days, lower, upper, facecolor='yellow', alpha=0.2)
     lower = mean - 0.5*stddev
     upper = mean + 0.5*stddev
+    plot.fill_between(days, lower, upper, facecolor='red', alpha=0.1)
+    lower = mean - 1.0*stddev
+    upper = mean + 1.0*stddev
     plot.fill_between(days, lower, upper, facecolor='orange', alpha=0.1)
+    lower = mean - 2.0*stddev
+    upper = mean + 2.0*stddev
+    plot.fill_between(days, lower, upper, facecolor='yellow', alpha=0.1)
+    # end Plot DAYS before cleaning
 
     # Plot HOURS before cleaning
     means = []
     hours = []
+    ranges = []
     for hour in hourBefore:
         hours.append(hour.stats.starttime)
         means.append(hour.stats.statistics['average'])
+        ranges.append(hour.stats.statistics['maximum']-hour.stats.statistics['minimum'])
     hours = matplotlib.dates.date2num(hours)
 
     plot.subplot(233)
     plot.ylabel('Average (nT)')
     plot.xlabel('Hour')
-    plot.plot(hours, means, 'b+')
+    plot.errorbar(hours, means, ranges, color='cyan', label='Minute range')
+    plot.plot(hours, means, 'b+', label='Hour')
+    plot.legend(loc='best')
 
     mean = np.nanmean(means)
-    plot.plot([hours[0], hours[len(hours)-1]],[mean, mean], lw=1)
+    plot.plot([hours[0], hours[len(hours)-1]],[mean, mean], lw=1, label='mean')
 
     stddev = np.nanmax(means) - np.nanmin(means)
-    lower = mean - 0.1*stddev
-    upper = mean + 0.1*stddev
-    plot.fill_between(hours, lower, upper, facecolor='yellow', alpha=0.2)
     lower = mean - 0.5*stddev
     upper = mean + 0.5*stddev
+    plot.fill_between(hours, lower, upper, facecolor='red', alpha=0.1)
+    lower = mean - 1.0*stddev
+    upper = mean + 1.0*stddev
     plot.fill_between(hours, lower, upper, facecolor='orange', alpha=0.1)
+    # end Plot HOURS before cleaning
 
-    # Set up all of the plots AFTER the data has been cleaned.
+    #### Set up all of the plots AFTER the data has been cleaned. ###
     # Plot MONTHS after cleaning
     means = []
     months = []
+    ranges = []
     for month in monthAfter:
         months.append(month.stats.starttime)
         means.append(month.stats.statistics['average'])
+        ranges.append(month.stats.statistics['maximum']-month.stats.statistics['minimum'])
     months = matplotlib.dates.date2num(months)
 
     plot.subplot(234)
-    plot.plot(months, means, 'gs')
     plot.ylabel('Average (nT)')
     plot.xlabel('Month')
+    plot.errorbar(months, means, ranges, color='cyan', label='Daily mean range')
+    plot.plot(months, means, 'gs', label='Month')
+    plot.legend(loc='best')
 
     mean = np.nanmean(means)
-    plot.plot([months[0], months[len(months)-1]],[mean, mean], lw=1)
+    plot.plot([months[0], months[len(months)-1]],[mean, mean], lw=1, label='mean')
 
     stddev = np.nanmax(means) - np.nanmin(means)
-    lower = mean - 0.1*stddev
-    upper = mean + 0.1*stddev
-    plot.fill_between(months, lower, upper, facecolor='yellow', alpha=0.2)
     lower = mean - 0.5*stddev
     upper = mean + 0.5*stddev
+    plot.fill_between(months, lower, upper, facecolor='red', alpha=0.1)
+    lower = mean - 1.0*stddev
+    upper = mean + 1.0*stddev
     plot.fill_between(months, lower, upper, facecolor='orange', alpha=0.1)
+    lower = mean - 2.0*stddev
+    upper = mean + 2.0*stddev
+    plot.fill_between(months, lower, upper, facecolor='yellow', alpha=0.1)
+    # end Plot MONTHS after cleaning
 
     # Plot DAYS after cleaning
     means = []
     days = []
+    ranges = []
     for day in dayAfter:
         days.append(day.stats.starttime)
         means.append(day.stats.statistics['average'])
+        ranges.append(day.stats.statistics['maximum']-day.stats.statistics['minimum'])
     days = matplotlib.dates.date2num(days)
 
     plot.subplot(235)
-    plot.plot(days, means, 'g^')
     plot.ylabel('Average (nT)')
     plot.xlabel('Day')
+    plot.errorbar(days, means, ranges, color='cyan', label='Hourly mean range')
+    plot.plot(days, means, 'g^', label='Day')
+    plot.legend(loc='best')
 
     mean = np.nanmean(means)
-    plot.plot([days[0], days[len(days)-1]],[mean, mean], lw=1)
+    plot.plot([days[0], days[len(days)-1]],[mean, mean], lw=1, label='mean')
 
     stddev = np.nanmax(means) - np.nanmin(means)
-    lower = mean - 0.1*stddev
-    upper = mean + 0.1*stddev
-    plot.fill_between(days, lower, upper, facecolor='yellow', alpha=0.2)
     lower = mean - 0.5*stddev
     upper = mean + 0.5*stddev
+    plot.fill_between(days, lower, upper, facecolor='red', alpha=0.1)
+    lower = mean - 1.0*stddev
+    upper = mean + 1.0*stddev
     plot.fill_between(days, lower, upper, facecolor='orange', alpha=0.1)
+    lower = mean - 2.0*stddev
+    upper = mean + 2.0*stddev
+    plot.fill_between(days, lower, upper, facecolor='yellow', alpha=0.1)
+    # end Plot DAYS after cleaning
 
     # Plot HOURS after cleaning
     means = []
     hours = []
+    ranges = []
     for hour in hourAfter:
         hours.append(hour.stats.starttime)
         means.append(hour.stats.statistics['average'])
+        ranges.append(hour.stats.statistics['maximum']-hour.stats.statistics['minimum'])
     hours = matplotlib.dates.date2num(hours)
 
     plot.subplot(236)
-    plot.plot(hours, means, 'g+')
     plot.ylabel('Average (nT)')
     plot.xlabel('Hour')
+    plot.errorbar(hours, means, ranges, color='cyan', label='Minute range')
+    plot.plot(hours, means, 'g+', label='Hour')
+    plot.legend(loc='best')
 
     mean = np.nanmean(means)
     plot.plot([hours[0], hours[len(hours)-1]],[mean, mean], lw=1)
 
     stddev = np.nanmax(means) - np.nanmin(means)
-    lower = mean - 0.1*stddev
-    upper = mean + 0.1*stddev
-    plot.fill_between(hours, lower, upper, facecolor='yellow', alpha=0.2)
     lower = mean - 0.5*stddev
     upper = mean + 0.5*stddev
+    plot.fill_between(hours, lower, upper, facecolor='red', alpha=0.1)
+    lower = mean - 1.0*stddev
+    upper = mean + 1.0*stddev
     plot.fill_between(hours, lower, upper, facecolor='orange', alpha=0.1)
+    # end Plot HOURS after cleaning
 
+    mng = plot.get_current_fig_manager()
+    mng.window.showMaximized()
     plot.show()
 
 def plot_months(monthlyStats):
