@@ -7,6 +7,7 @@ import obspy.core
 import obspy.core.utcdatetime as UTC
 import matplotlib
 import matplotlib.pyplot as plot
+from matplotlib.dates import DateFormatter
 from Algorithm import Algorithm
 from geomagio import TimeseriesFactoryException
 import copy
@@ -411,7 +412,7 @@ def print_all(stats):
     print "Range of all Minutes  : " + str(statistics['maximum'] - statistics['minimum']) + "nT"
 
 def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter):
-    plot.figure('Average nT Values')
+    figure = plot.figure('Average nT Values')
 
     ### Set up all of the plots BEFORE the data has been cleaned. ###
     # Plot MONTHS before cleaning
@@ -424,12 +425,14 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
         ranges.append(month.stats.statistics['maximum']-month.stats.statistics['minimum'])
     months = matplotlib.dates.date2num(months)
 
-    plot.subplot(231)
-    plot.ylabel('Average (nT)')
-    plot.xlabel('Month')
+    subplot = figure.add_subplot(231)
+    subplot.set_title('Montly means (nT)')
+    subplot.set_xticks(months)
+    subplot.xaxis.set_major_formatter(DateFormatter('%b %y'))
+    figure.autofmt_xdate(rotation=45)
+
     plot.errorbar(months, means, ranges, color='cyan', label='Daily mean range')
     plot.plot(months, means, 'bs', label='Month')
-    # plot.plot_date(months, means, fmt='bs', xdate=True, tz='UTC', label='Month')
     plot.legend(loc='best')
 
     mean = np.nanmean(means)
@@ -459,11 +462,15 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
         ranges.append(day.stats.statistics['maximum']-day.stats.statistics['minimum'])
     days = matplotlib.dates.date2num(days)
 
-    plot.subplot(232)
-    plot.ylabel('Average (nT)')
-    plot.xlabel('Day')
+    subplot = figure.add_subplot(232)
+    subplot.set_title('Daily means (nT)')
+    subplot.set_xticks(months)
+    subplot.xaxis.set_major_formatter(DateFormatter('%b %y'))
+    figure.autofmt_xdate(rotation=45)
+
     plot.errorbar(days, means, ranges, color='cyan', label='Hourly mean range')
     plot.plot(days, means, 'b^', label='Day')
+    # plot.plot_date(days, means, fmt='b^', xdate=True, tz='UTC', label='Day')
     plot.legend(loc='best')
 
     mean = np.nanmean(means)
@@ -491,9 +498,12 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
         ranges.append(hour.stats.statistics['maximum']-hour.stats.statistics['minimum'])
     hours = matplotlib.dates.date2num(hours)
 
-    plot.subplot(233)
-    plot.ylabel('Average (nT)')
-    plot.xlabel('Hour')
+    subplot = figure.add_subplot(233)
+    subplot.set_title('Hourly means (nT)')
+    subplot.set_xticks(months)
+    subplot.xaxis.set_major_formatter(DateFormatter('%b %y'))
+    figure.autofmt_xdate(rotation=45)
+
     plot.errorbar(hours, means, ranges, color='cyan', label='Minute range')
     plot.plot(hours, means, 'b+', label='Hour')
     plot.legend(loc='best')
@@ -521,9 +531,12 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
         ranges.append(month.stats.statistics['maximum']-month.stats.statistics['minimum'])
     months = matplotlib.dates.date2num(months)
 
-    plot.subplot(234)
-    plot.ylabel('Average (nT)')
-    plot.xlabel('Month')
+    subplot = figure.add_subplot(234)
+    subplot.set_title('Monthly means (nT)')
+    subplot.set_xticks(months)
+    subplot.xaxis.set_major_formatter(DateFormatter('%b %y'))
+    figure.autofmt_xdate(rotation=45)
+
     plot.errorbar(months, means, ranges, color='cyan', label='Daily mean range')
     plot.plot(months, means, 'gs', label='Month')
     plot.legend(loc='best')
@@ -553,9 +566,12 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
         ranges.append(day.stats.statistics['maximum']-day.stats.statistics['minimum'])
     days = matplotlib.dates.date2num(days)
 
-    plot.subplot(235)
-    plot.ylabel('Average (nT)')
-    plot.xlabel('Day')
+    subplot = figure.add_subplot(235)
+    subplot.set_title('Daily means (nT)')
+    subplot.set_xticks(months)
+    subplot.xaxis.set_major_formatter(DateFormatter('%b %y'))
+    figure.autofmt_xdate(rotation=45)
+
     plot.errorbar(days, means, ranges, color='cyan', label='Hourly mean range')
     plot.plot(days, means, 'g^', label='Day')
     plot.legend(loc='best')
@@ -585,9 +601,12 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
         ranges.append(hour.stats.statistics['maximum']-hour.stats.statistics['minimum'])
     hours = matplotlib.dates.date2num(hours)
 
-    plot.subplot(236)
-    plot.ylabel('Average (nT)')
-    plot.xlabel('Hour')
+    subplot = figure.add_subplot(236)
+    subplot.set_title('Hourly means (nT)')
+    subplot.set_xticks(months)
+    subplot.xaxis.set_major_formatter(DateFormatter('%b %y'))
+    figure.autofmt_xdate(rotation=45)
+
     plot.errorbar(hours, means, ranges, color='cyan', label='Minute range')
     plot.plot(hours, means, 'g+', label='Hour')
     plot.legend(loc='best')
