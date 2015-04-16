@@ -111,13 +111,13 @@ def clean_MHVs(timeseries):
     # timeseries.plot() # This doesn't show anything
     # trace.plot()      # This also shows nothing...
     # print_months(monthlyStats)
-    # plot_months(monthlyStats)
+    plot_months(monthBefore, monthlyStats)
 
     # print_days(dailyStats)
-    # plot_days(dailyStats)
+    plot_days(dayBefore, dailyStats)
 
     # print_hours(hourlyStats)
-    # plot_hours(hourlyStats)
+    plot_hours(hourBefore, hourlyStats)
 
     print_all(trace.stats)
     plot_all(monthBefore, monthlyStats, dayBefore, dailyStats, hourBefore, hourlyStats)
@@ -459,90 +459,61 @@ def kSubplot(fig, num, title, timeList, rLabel, mLabel):
     upper = mean + 2.0*stddev
     plot.fill_between(times, lower, upper, facecolor='yellow', alpha=0.1)
 
-    return subplot
-
 def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter):
     figure = plot.figure('Average nT Values')
 
     ### Set up all of the plots BEFORE the data has been cleaned. ###
     # Plot MONTHS before cleaning
-    subplot = kSubplot(figure, 231, 'Monthly means (nT)', monthBefore, 'Daily mean range', 'Month')
+    kSubplot(figure, 231, 'Monthly means (nT)', monthBefore, 'Daily mean range', 'Month')
 
     # Plot DAYS before cleaning
-    subplot = kSubplot(figure, 232, 'Daily means (nT)', dayBefore, 'Hourly mean range', 'Day')
+    kSubplot(figure, 232, 'Daily means (nT)', dayBefore, 'Hourly mean range', 'Day')
 
     # Plot HOURS before cleaning
-    subplot = kSubplot(figure, 233, 'Hourly means (nT)', hourBefore, 'Minute range', 'Hour')
+    kSubplot(figure, 233, 'Hourly means (nT)', hourBefore, 'Minute range', 'Hour')
 
     #### Set up all of the plots AFTER the data has been cleaned. ###
     # Plot MONTHS after cleaning
-    subplot = kSubplot(figure, 234, 'Monthly means (nT)', monthAfter, 'Daily mean range', 'Month')
+    kSubplot(figure, 234, 'Monthly means (nT)', monthAfter, 'Daily mean range', 'Month')
 
     # Plot DAYS after cleaning
-    subplot = kSubplot(figure, 235, 'Daily means (nT)', dayAfter, 'Hourly mean range', 'Day')
+    kSubplot(figure, 235, 'Daily means (nT)', dayAfter, 'Hourly mean range', 'Day')
 
     # Plot HOURS after cleaning
-    subplot = kSubplot(figure, 236, 'Hourly means (nT)', hourAfter, 'Minute range', 'Hour')
+    kSubplot(figure, 236, 'Hourly means (nT)', hourAfter, 'Minute range', 'Hour')
 
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
     plot.show()
 
-def plot_months(monthlyStats):
-    means = []
-    months = []
-    for month in monthlyStats:
-        stats = month.stats
-        statistics = stats.statistics
+def plot_months(monthBefore, monthAfter):
+    figure = plot.figure('Average monthly nT Values')
 
-        start = stats.starttime
-        months.append(start)
+    kSubplot(figure, 211, 'Monthly means (nT)', monthBefore, 'Daily mean range', 'Month')
+    kSubplot(figure, 212, 'Monthly means (nT)', monthAfter, 'Daily mean range', 'Month')
 
-        mean = statistics['average']
-        means.append(mean)
-
-    months = matplotlib.dates.date2num(months)
-    plot.plot(months, means, 'bs')
-    plot.ylabel('Average (nT)')
-    plot.xlabel('Month')
+    mng = plot.get_current_fig_manager()
+    mng.window.showMaximized()
     plot.show()
 
-def plot_days(dailyStats):
-    means = []
-    days = []
-    for day in dailyStats:
-        stats = day.stats
-        statistics = stats.statistics
+def plot_days(dayBefore, dayAfter):
+    figure = plot.figure('Average daily nT Values')
 
-        start = stats.starttime
-        days.append(start)
+    kSubplot(figure, 211, 'Daily means (nT)', dayBefore, 'Hourly mean range', 'Day')
+    kSubplot(figure, 212, 'Daily means (nT)', dayAfter, 'Hourly mean range', 'Day')
 
-        mean = statistics['average']
-        means.append(mean)
-
-    days = matplotlib.dates.date2num(days)
-    plot.plot(days, means, 'g^')
-    plot.ylabel('Average (nT)')
-    plot.xlabel('Day')
+    mng = plot.get_current_fig_manager()
+    mng.window.showMaximized()
     plot.show()
 
-def plot_hours(hourlyStats):
-    means = []
-    hours = []
-    for hour in hourlyStats:
-        stats = hour.stats
-        statistics = stats.statistics
+def plot_hours(hourBefore, hourAfter):
+    figure = plot.figure('MHVs (Mean Hourly nT Values)')
 
-        start = stats.starttime
-        hours.append(start)
+    kSubplot(figure, 211, 'Hourly means (nT)', hourBefore, 'Minute mean range', 'Hour')
+    kSubplot(figure, 212, 'Hourly means (nT)', hourAfter, 'Minute range', 'Hour')
 
-        mean = statistics['average']
-        means.append(mean)
-
-    hours = matplotlib.dates.date2num(hours)
-    plot.plot(hours, means, 'r+')
-    plot.ylabel('Average (nT)')
-    plot.xlabel('Hour')
+    mng = plot.get_current_fig_manager()
+    mng.window.showMaximized()
     plot.show()
 
 def print_months(monthlyStats):
