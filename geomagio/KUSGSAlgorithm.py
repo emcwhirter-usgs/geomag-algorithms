@@ -53,7 +53,7 @@ class KUSGSAlgorithm(Algorithm):
             Parameters
             ----------
             out_stream: obspy.core.Stream
-                new stream object containing the converted coordinates.
+                New stream object containing the converted coordinates.
         """
         out_stream = timeseries
 
@@ -91,11 +91,11 @@ def clean_MHVs(timeseries):
     months = get_months(days)
 
     monthlyStats = []
-    monthly_slices(months, monthlyStats, trace)
+    slice_months(months, monthlyStats, trace)
     monthBefore = copy.deepcopy(monthlyStats)
 
     dailyStats = []
-    daily_slices(days, dailyStats, trace)
+    slice_days(days, dailyStats, trace)
     dayBefore = copy.deepcopy(dailyStats)
 
     hours = []
@@ -103,30 +103,39 @@ def clean_MHVs(timeseries):
         hours.append(get_hours(day))
 
     hourlyStats = []
-    hourly_slices(hours, hourlyStats, trace)
+    slice_hours(hours, hourlyStats, trace)
     hourBefore = copy.deepcopy(hourlyStats)
 
     clean_hours(hourlyStats, monthlyStats)
 
     # timeseries.plot() # This doesn't show anything
     # trace.plot()      # This also shows nothing...
-    print_months(monthlyStats)
-    plot_months(monthBefore, monthlyStats)
+    # print_months(monthlyStats)
+    # plot_months(monthBefore, monthlyStats)
 
     # print_days(dailyStats)
-    plot_days(dayBefore, dailyStats)
+    # plot_days(dayBefore, dailyStats)
 
     # print_hours(hourlyStats)
-    plot_hours(hourBefore, hourlyStats)
+    # plot_hours(hourBefore, hourlyStats)
 
     print_all(trace.stats)
     plot_all(monthBefore, monthlyStats, dayBefore, dailyStats, hourBefore, hourlyStats)
 
-def clean_hours(hourlyStats, monthlyStats, rangeLimit=0.5):
+def clean_hours(hourlyStats, monthlyStats, rangeLimit=1.0):
     """
-        rangeLimit as number of standard devations from the monthly mean.
-            Default is 0.5 standard deviations on top and bottom of the monthly
-            average. Decimal values are allowed.
+        Replace any hours within each month that have a range that is TODO
+        extreme with NaN.
+
+        Parameters
+        ----------
+        hourlyStats : List <obspy.core.trac.Trace>
+            List of hourly statistics
+        monthlyStats : List <obspy.core.trac.Trace>
+            List of monthly statistics
+        rangeLimit : Float
+            Number of standard deviations (from the monthly statistics) to
+            use as the acceptable range of hours within the month.
     """
     print "#####  Cleaning MHVs  #####"
 
@@ -140,7 +149,7 @@ def clean_hours(hourlyStats, monthlyStats, rangeLimit=0.5):
         for monthStat in monthlyStats:
             if monthStat.stats.starttime.month == hourMonth:
                 stdD = monthStat.stats.statistics['standarddeviation']
-                allowedRange = 2 * stdD * rangeLimit
+                allowedRange = stdD * rangeLimit
 
         if np.isnan(hour.stats.statistics['average']):
             nanMhvCount += 1
@@ -236,134 +245,6 @@ def clean_hours_other(hourlyStats, monthlyStats, rangeLimit=2.0):
 
     print "#####  MHVs Cleaned  #####\n"
 
-def hourly_slices(hours, hourlyStats, trace):
-    for day in hours:
-        for hour in day:
-            end = np.datetime64(hour) + ONEHOUR - ONEMINUTE
-            # TODO Look into using the raw time value instead of a string
-            end = UTC.UTCDateTime(str(end))
-
-            thisHour = trace.slice(hour, end)
-            if thisHour.stats.npts != MINUTESPERHOUR:
-                raise TimeseriesFactoryException(
-                        '1 Hour should have 60 minutes.')
-
-            statistics(thisHour)
-            hourlyStats.append(thisHour)
-
-def daily_slices(days, dailyStats, trace):
-    for day in days:
-        end = np.datetime64(day) + ONEDAY - ONEMINUTE
-        # TODO Look into using the raw time value instead of a string
-        end = UTC.UTCDateTime(str(end))
-
-        thisDay = trace.slice(day, end)
-        if thisDay.stats.npts != MINUTESPERDAY:
-            raise TimeseriesFactoryException(
-                    'Entire calendar days of minute data required for K.')
-
-        statistics(thisDay)
-        dailyStats.append(thisDay)
-
-def monthly_slices(months, monthlyStats, trace):
-    for month in months:
-        # Numpy doesn't know how to add a month...so work-around.
-        date = np.datetime64(month, timezone='UTC')
-        monthNum = int(np.datetime_as_string(date)[5:7])
-
-        year = np.datetime_as_string(date, timezone='UTC')[:5]
-
-        if monthNum < 10:
-            monthNum = "0" + str(monthNum+1)
-        elif monthNum < 12:
-            monthNum = str(monthNum + 1)
-        else:
-            monthNum = str("01")
-            year = str(int(year[:4])+1) + "-"
-
-        end = year + monthNum + "-01T00:00:00.000000Z"
-        end = np.datetime64(end, timezone='UTC')
-
-        endtime = np.datetime_as_string(end - ONEMINUTE, timezone='UTC')
-        # end work-around
-
-        starttime = np.datetime_as_string(date, timezone='UTC')
-
-        starttime = UTC.UTCDateTime(str(starttime))
-        endtime = UTC.UTCDateTime(str(endtime))
-        thisMonth = trace.slice(starttime, endtime)
-
-        statistics(thisMonth)
-        monthlyStats.append(thisMonth)
-
-def statistics(trace):
-    """
-        Calculate average, standard deviation, minimum and maximum on given
-        trace, add them to a 'statistics' object and attach them to the trace.
-    """
-    H = trace.data
-
-    mean = np.nanmean(H)
-    # Skip some calculations if this entire trace is NaN's.
-    if not (np.isnan(mean)):
-        # Ignoring any NaN's for these calculations.
-        trace.stats.statistics = {
-            'average': mean,
-            'maximum': np.nanmax(H),
-            'minimum': np.nanmin(H),
-            'standarddeviation': np.nanstd(H)
-        }
-    else:
-        trace.stats.statistics = {
-            'average': np.nan,
-            'maximum': np.nan,
-            'minimum': np.nan,
-            'standarddeviation': np.nan
-        }
-
-def get_months(days):
-    """
-        Get months between (inclusive) starttime and endtime.
-
-        Returns
-        -------
-        array_like
-            List of times, one per month, for all days between and including
-            ``starttime`` and ``endtime``.
-    """
-    months = []
-
-    month = 0
-    for day in days:
-        if day.month != month:
-            date = np.datetime64(day)
-            date = UTC.UTCDateTime(str(date))
-            months.append(date)
-            month = day.month
-
-    return months
-
-def get_hours(day):
-    """
-        Get all of the hours in the given day.
-
-        Returns
-        -------
-        array_like
-            List of times, one per month, for all days between and including
-            ``starttime`` and ``endtime``.
-    """
-    hours = []
-    date = np.datetime64(day)
-
-    for i in range(0, 24):
-        hour = date + i * ONEHOUR
-        hour = UTC.UTCDateTime(str(hour))
-
-        hours.append(hour)
-
-    return hours
-
 def get_days(starttime, endtime):
     """
         Get days between (inclusive) starttime and endtime.
@@ -402,25 +283,79 @@ def get_days(starttime, endtime):
 
     return days
 
-def print_all(stats):
-    statistics = stats.statistics
-    print "Start Time            : " + str(stats.starttime)
-    print "End Time              : " + str(stats.endtime)
-    print "Total # of Minutes    : " + str(stats.npts) + " (" + str(stats.npts/MINUTESPERDAY) + " * " + str(MINUTESPERDAY) + ")"
-    print "Average of all Minutes: " + str(statistics['average']) + "nT"
-    print "Std Dev of all Minutes: " + str(statistics['standarddeviation']) + "nT"
-    print "Range of all Minutes  : " + str(statistics['maximum'] - statistics['minimum']) + "nT"
+def get_hours(day):
+    """
+        Get all of the hours in the given day.
+
+        Parameters
+        ----------
+        day : obspy.core.utcdatetime.UTCDateTime
+
+        Returns
+        -------
+        array_like
+            List of times, one per month, for all days between and including
+            ``starttime`` and ``endtime``.
+    """
+    hours = []
+    date = np.datetime64(day)
+
+    for i in range(0, 24):
+        hour = date + i * ONEHOUR
+        hour = UTC.UTCDateTime(str(hour))
+
+        hours.append(hour)
+
+    return hours
+
+def get_months(days):
+    """
+        Get months between (inclusive) starttime and endtime.
+
+        Parameters
+        ----------
+        days : List of obspy.core.utcdatetime.UTCDateTime
+
+        Returns
+        -------
+        array_like
+            List of times, one per month, for all days between and including
+            ``starttime`` and ``endtime``.
+    """
+    months = []
+
+    month = 0
+    for day in days:
+        if day.month != month:
+            date = np.datetime64(day)
+            date = UTC.UTCDateTime(str(date))
+            months.append(date)
+            month = day.month
+
+    return months
 
 def kSubplot(fig, num, title, timeList, rLabel, mLabel, color='b', marker='s'):
     """
-        fig - instance of plot.figure
-        num - subplot rows, columns and position
-        title - subplot title
-        timeList - array of times and stats to use for plot
-        rLabel - Range label
-        mLabel - Mean label
-        color - marker color
-        marker - marker style/shape
+        Helper method for making subplots.
+
+        Parameters
+        ----------
+        fig : magplotlib.figure.Figure
+            Instance of plot.figure to attach the subplot to
+        num : Integer
+            Subplot rows, columns and position
+        title : String
+            Subplot title
+        timeList :
+            Array of times and stats to use for plot
+        rLabel : String
+            Range label
+        mLabel : String
+            Mean label
+        color : String with valid marker color
+            Marker color
+        marker : String with valid marker string
+            Marker style/shape
     """
     means = []
     times = []
@@ -463,12 +398,16 @@ def kSubplot(fig, num, title, timeList, rLabel, mLabel, color='b', marker='s'):
 
 def plot_all(monBefore, monAfter, dayBefore, dayAfter, hourBefore, hourAfter):
     """
-        monBefore - array of monthly statistics before cleaning
-        monAfter - array of monthly statistics after cleaning
-        dayBefore - array of daily statistics before cleaning
-        dayAfter - array of daily statistics after cleaning
-        hourBefore - array of hourly statistics before cleaning
-        hourAfter - array of hourly statistics after cleaning
+        Plot montly, daily, and hourly statistics before and after cleaning.
+
+        Parameters
+        ----------
+        monBefore : array of monthly statistics before cleaning
+        monAfter : array of monthly statistics after cleaning
+        dayBefore : array of daily statistics before cleaning
+        dayAfter : array of daily statistics after cleaning
+        hourBefore : array of hourly statistics before cleaning
+        hourAfter : array of hourly statistics after cleaning
     """
     fig = plot.figure('Average nT Values')
 
@@ -504,20 +443,15 @@ def plot_all(monBefore, monAfter, dayBefore, dayAfter, hourBefore, hourAfter):
     mng.window.showMaximized()
     plot.show()
 
-def plot_months(monBefore, monAfter):
-    fig = plot.figure('Average monthly nT Values')
-
-    monthTitle = 'Monthly means (nT)'
-    monthLabel = 'Daily mean range'
-
-    kSubplot(fig, 211, monthTitle, monBefore, monthLabel, 'Month', 'blue', 's')
-    kSubplot(fig, 212, monthTitle, monAfter, monthLabel, 'Month', 'green', 's')
-
-    mng = plot.get_current_fig_manager()
-    mng.window.showMaximized()
-    plot.show()
-
 def plot_days(dayBefore, dayAfter):
+    """
+        Plot daily statistics before and after cleaning.
+
+        Parameters
+        ----------
+        dayBefore :
+        dayAfter :
+    """
     fig = plot.figure('Average daily nT Values')
 
     dayTitle = 'Daily means (nT)'
@@ -531,6 +465,14 @@ def plot_days(dayBefore, dayAfter):
     plot.show()
 
 def plot_hours(hourBefore, hourAfter):
+    """
+        Plot hourly statistics before and after cleaning.
+
+        Parameters
+        ----------
+        hourBefore :
+        hourAfter :
+    """
     fig = plot.figure('MHVs (Mean Hourly nT Values)')
 
     hourTitle = 'Hourly means (nT)'
@@ -543,47 +485,233 @@ def plot_hours(hourBefore, hourAfter):
     mng.window.showMaximized()
     plot.show()
 
-def print_months(monthlyStats):
-    ### Example output ###
-    #  Month          : 2013-12-31T00:00:00.000000Z
-    #  Monthly Average: 20894.2173562
-    #  Monthly Std Dev: 9.39171243572
-    #  Monthly Range  : 44.319
-    for month in monthlyStats:
-        stats = month.stats
-        statistics = stats.statistics
-        print "  Month          : " + str(stats.starttime)
-        print "  Monthly Average: " + str(statistics['average'])
-        print "  Monthly Std Dev: " + str(statistics['standarddeviation'])
-        print "  Monthly Range  : " + str(statistics['maximum']
-            - statistics['minimum']) + "\n"
+def plot_months(monBefore, monAfter):
+    """
+        Plot monthly statistics before and after cleaning.
+
+        Parameters
+        ----------
+        monBefore :
+        monAfter :
+    """
+    fig = plot.figure('Average monthly nT Values')
+
+    monthTitle = 'Monthly means (nT)'
+    monthLabel = 'Daily mean range'
+
+    kSubplot(fig, 211, monthTitle, monBefore, monthLabel, 'Month', 'blue', 's')
+    kSubplot(fig, 212, monthTitle, monAfter, monthLabel, 'Month', 'green', 's')
+
+    mng = plot.get_current_fig_manager()
+    mng.window.showMaximized()
+    plot.show()
+
+def print_all(stats):
+    """
+        Print statistics for the entire trace to the terminal.
+
+        Parameters
+        ----------
+        stats :
+    """
+    statistics = stats.statistics
+    print "Start Time            : " + str(stats.starttime)
+    print "End Time              : " + str(stats.endtime)
+    print "Total # of Minutes    : " + str(stats.npts) + " (" \
+        + str(stats.npts/MINUTESPERDAY) + " * " + str(MINUTESPERDAY) + ")"
+    print "Average of all Minutes: " + str(statistics['average']) + "nT"
+    print "Std Dev of all Minutes: " \
+        + str(statistics['standarddeviation']) + "nT"
+    print "Range of all Minutes  : " \
+        + str(statistics['maximum'] - statistics['minimum']) + "nT"
 
 def print_days(dailyStats):
-    ### Example output ###
-    #    Day          : 2013-12-31T00:00:00.000000Z
-    #    Daily Average: 20894.2173562
-    #    Daily Std Dev: 9.39171243572
-    #    Daily Range  : 44.319
+    """
+        Print statistics for each day to terminal.
+        ### Example output ###
+            Day          : 2013-12-31T00:00:00.000000Z
+            Daily Average: 20894.2173562
+            Daily Std Dev: 9.39171243572
+            Daily Range  : 44.319
+
+        Parameters
+        ----------
+        dailyStats : List <obspy.core.trac.Trace>
+            List of daily statistics
+    """
     for day in dailyStats:
         stats = day.stats
         statistics = stats.statistics
         print "    Day          : " + str(stats.starttime)
         print "    Daily Average: " + str(statistics['average'])
         print "    Daily Std Dev: " + str(statistics['standarddeviation'])
-        print "    Daily Range  : " + str(statistics['maximum']
+        print "    Daily Range  : " + str(statistics['maximum'] \
             - statistics['minimum']) + "\n"
 
 def print_hours(hourlyStats):
-    ### Example output ###
-    #      Hour          : 2014-01-02T17:00:00.000000Z
-    #      Hourly Average: 20855.7571167
-    #      Hourly Std Dev: 10.1907743067
-    #      Hourly Range  : 36.883
+    """
+        Print statistics for each hour to terminal.
+        ### Example output ###
+              Hour          : 2014-01-02T17:00:00.000000Z
+              Hourly Average: 20855.7571167
+              Hourly Std Dev: 10.1907743067
+              Hourly Range  : 36.883
+
+        Parameters
+        ----------
+        hourlyStats : List <obspy.core.trac.Trace>
+            List of hourly statistics
+    """
     for hour in hourlyStats:
         stats = hour.stats
         statistics = stats.statistics
         print "      Hour          : " + str(stats.starttime)
         print "      Hourly Average: " + str(statistics['average'])
         print "      Hourly Std Dev: " + str(statistics['standarddeviation'])
-        print "      Hourly Range  : " + str(statistics['maximum']
+        print "      Hourly Range  : " + str(statistics['maximum'] \
             - statistics['minimum']) + "\n"
+
+def print_months(monthlyStats):
+    """
+        Print statistics for each month to terminal.
+        ### Example output ###
+          Month          : 2013-12-31T00:00:00.000000Z
+          Monthly Average: 20894.2173562
+          Monthly Std Dev: 9.39171243572
+          Monthly Range  : 44.319
+
+        Parameters
+        ----------
+        monthlyStats : List <obspy.core.trac.Trace>
+            List of monthly statistics
+    """
+    for month in monthlyStats:
+        stats = month.stats
+        statistics = stats.statistics
+        print "  Month          : " + str(stats.starttime)
+        print "  Monthly Average: " + str(statistics['average'])
+        print "  Monthly Std Dev: " + str(statistics['standarddeviation'])
+        print "  Monthly Range  : " + str(statistics['maximum'] \
+            - statistics['minimum']) + "\n"
+
+def slice_days(days, dailyStats, trace):
+    """
+        Use array of "days" to slice up "trace" and collect daily statistics
+        to be attached to dailyStats.
+
+        Parameters
+        ----------
+        days : array of days UTC
+        dailyStats : List <obspy.core.trac.Trace>
+            List of daily statistics
+        trace : a time-series trace of data
+    """
+    for day in days:
+        end = np.datetime64(day) + ONEDAY - ONEMINUTE
+        # TODO Look into using the raw time value instead of a string
+        end = UTC.UTCDateTime(str(end))
+
+        thisDay = trace.slice(day, end)
+        if thisDay.stats.npts != MINUTESPERDAY:
+            raise TimeseriesFactoryException(
+                    'Entire calendar days of minute data required for K.')
+
+        statistics(thisDay)
+        dailyStats.append(thisDay)
+
+def slice_hours(hours, hourlyStats, trace):
+    """
+        Use array of "hours" to slice up "trace" and collect hourly statistics
+        to be attached to dailyStats.
+
+        Parameters
+        ----------
+        hours : array of days UTC
+        hourlyStats : List <obspy.core.trac.Trace>
+            List of hourly statistics
+        trace : a time-series trace of data
+    """
+    for day in hours:
+        for hour in day:
+            end = np.datetime64(hour) + ONEHOUR - ONEMINUTE
+            # TODO Look into using the raw time value instead of a string
+            end = UTC.UTCDateTime(str(end))
+
+            thisHour = trace.slice(hour, end)
+            if thisHour.stats.npts != MINUTESPERHOUR:
+                raise TimeseriesFactoryException(
+                        '1 Hour should have 60 minutes.')
+
+            statistics(thisHour)
+            hourlyStats.append(thisHour)
+
+def slice_months(months, monthlyStats, trace):
+    """
+        Use array of "months" to slice up "trace" and collect montly statistics
+        to be attached to monthlyStats.
+
+        Parameters
+        ----------
+        months : array of months UTC
+        monthlyStats : List <obspy.core.trac.Trace>
+            List of monthly statistics
+        trace : a time-series trace of data
+    """
+    for month in months:
+        # Numpy doesn't know how to add a month...so work-around.
+        date = np.datetime64(month, timezone='UTC')
+        monthNum = int(np.datetime_as_string(date)[5:7])
+
+        year = np.datetime_as_string(date, timezone='UTC')[:5]
+
+        if monthNum < 10:
+            monthNum = "0" + str(monthNum+1)
+        elif monthNum < 12:
+            monthNum = str(monthNum + 1)
+        else:
+            monthNum = str("01")
+            year = str(int(year[:4])+1) + "-"
+
+        end = year + monthNum + "-01T00:00:00.000000Z"
+        end = np.datetime64(end, timezone='UTC')
+
+        endtime = np.datetime_as_string(end - ONEMINUTE, timezone='UTC')
+        # end work-around
+
+        starttime = np.datetime_as_string(date, timezone='UTC')
+
+        starttime = UTC.UTCDateTime(str(starttime))
+        endtime = UTC.UTCDateTime(str(endtime))
+        thisMonth = trace.slice(starttime, endtime)
+
+        statistics(thisMonth)
+        monthlyStats.append(thisMonth)
+
+def statistics(trace):
+    """
+        Calculate average, standard deviation, minimum and maximum on given
+        trace, add them to a 'statistics' object and attach them to the trace.
+
+        Parameters
+        ----------
+        trace :
+    """
+    H = trace.data
+
+    mean = np.nanmean(H)
+    # Skip some calculations if this entire trace is NaN's.
+    if not (np.isnan(mean)):
+        # Ignoring any NaN's for these calculations.
+        trace.stats.statistics = {
+            'average': mean,
+            'maximum': np.nanmax(H),
+            'minimum': np.nanmin(H),
+            'standarddeviation': np.nanstd(H)
+        }
+    else:
+        trace.stats.statistics = {
+            'average': np.nan,
+            'maximum': np.nan,
+            'minimum': np.nan,
+            'standarddeviation': np.nan
+        }
