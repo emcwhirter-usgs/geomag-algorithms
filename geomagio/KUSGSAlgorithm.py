@@ -419,9 +419,13 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
     means = []
     months = []
     ranges = []
+    pts = 0
     for month in monthBefore:
         months.append(month.stats.starttime)
-        means.append(month.stats.statistics['average'])
+        mean = month.stats.statistics['average']
+        if not np.isnan(mean):
+            pts += 1
+        means.append(mean)
         ranges.append(month.stats.statistics['maximum']-month.stats.statistics['minimum'])
     months = matplotlib.dates.date2num(months)
 
@@ -433,7 +437,7 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
 
     plot.errorbar(months, means, ranges, color='cyan', label='Daily mean range')
     plot.plot(months, means, 'bs', label='Month')
-    plot.legend(loc='best')
+    plot.legend(loc='best', numpoints=1, frameon=False, title=str(pts)+" pts")
 
     mean = np.nanmean(means)
     plot.plot([months[0], months[len(months)-1]],[mean, mean], lw=1, label='mean')
@@ -456,9 +460,13 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
     means = []
     days = []
     ranges = []
+    pts = 0
     for day in dayBefore:
         days.append(day.stats.starttime)
-        means.append(day.stats.statistics['average'])
+        mean = day.stats.statistics['average']
+        if not np.isnan(mean):
+            pts += 1
+        means.append(mean)
         ranges.append(day.stats.statistics['maximum']-day.stats.statistics['minimum'])
     days = matplotlib.dates.date2num(days)
 
@@ -470,8 +478,7 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
 
     plot.errorbar(days, means, ranges, color='cyan', label='Hourly mean range')
     plot.plot(days, means, 'b^', label='Day')
-    # plot.plot_date(days, means, fmt='b^', xdate=True, tz='UTC', label='Day')
-    plot.legend(loc='best')
+    plot.legend(loc='best', numpoints=1, frameon=False, title=str(pts)+" pts")
 
     mean = np.nanmean(means)
     plot.plot([days[0], days[len(days)-1]],[mean, mean], lw=1, label='mean')
@@ -492,9 +499,13 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
     means = []
     hours = []
     ranges = []
+    pts = 0
     for hour in hourBefore:
         hours.append(hour.stats.starttime)
-        means.append(hour.stats.statistics['average'])
+        mean = hour.stats.statistics['average']
+        if not np.isnan(mean):
+            pts += 1
+        means.append(mean)
         ranges.append(hour.stats.statistics['maximum']-hour.stats.statistics['minimum'])
     hours = matplotlib.dates.date2num(hours)
 
@@ -506,7 +517,7 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
 
     plot.errorbar(hours, means, ranges, color='cyan', label='Minute range')
     plot.plot(hours, means, 'b+', label='Hour')
-    plot.legend(loc='best')
+    plot.legend(loc='best', numpoints=1, frameon=False, title=str(pts)+" pts")
 
     mean = np.nanmean(means)
     plot.plot([hours[0], hours[len(hours)-1]],[mean, mean], lw=1, label='mean')
@@ -525,9 +536,13 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
     means = []
     months = []
     ranges = []
+    pts = 0
     for month in monthAfter:
         months.append(month.stats.starttime)
-        means.append(month.stats.statistics['average'])
+        mean = month.stats.statistics['average']
+        if not np.isnan(mean):
+            pts += 1
+        means.append(mean)
         ranges.append(month.stats.statistics['maximum']-month.stats.statistics['minimum'])
     months = matplotlib.dates.date2num(months)
 
@@ -539,7 +554,7 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
 
     plot.errorbar(months, means, ranges, color='cyan', label='Daily mean range')
     plot.plot(months, means, 'gs', label='Month')
-    plot.legend(loc='best')
+    plot.legend(loc='best', numpoints=1, frameon=False, title=str(pts)+" pts")
 
     mean = np.nanmean(means)
     plot.plot([months[0], months[len(months)-1]],[mean, mean], lw=1, label='mean')
@@ -560,9 +575,13 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
     means = []
     days = []
     ranges = []
+    pts = 0
     for day in dayAfter:
         days.append(day.stats.starttime)
-        means.append(day.stats.statistics['average'])
+        mean = day.stats.statistics['average']
+        if not np.isnan(mean):
+            pts += 1
+        means.append(mean)
         ranges.append(day.stats.statistics['maximum']-day.stats.statistics['minimum'])
     days = matplotlib.dates.date2num(days)
 
@@ -574,7 +593,7 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
 
     plot.errorbar(days, means, ranges, color='cyan', label='Hourly mean range')
     plot.plot(days, means, 'g^', label='Day')
-    plot.legend(loc='best')
+    plot.legend(loc='best', numpoints=1, frameon=False, title=str(pts)+" pts")
 
     mean = np.nanmean(means)
     plot.plot([days[0], days[len(days)-1]],[mean, mean], lw=1, label='mean')
@@ -595,9 +614,13 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
     means = []
     hours = []
     ranges = []
+    pts = 0
     for hour in hourAfter:
         hours.append(hour.stats.starttime)
-        means.append(hour.stats.statistics['average'])
+        mean = hour.stats.statistics['average']
+        if not np.isnan(mean):
+            pts += 1
+        means.append(mean)
         ranges.append(hour.stats.statistics['maximum']-hour.stats.statistics['minimum'])
     hours = matplotlib.dates.date2num(hours)
 
@@ -609,7 +632,7 @@ def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter
 
     plot.errorbar(hours, means, ranges, color='cyan', label='Minute range')
     plot.plot(hours, means, 'g+', label='Hour')
-    plot.legend(loc='best')
+    plot.legend(loc='best', numpoints=1, frameon=False, title=str(pts)+" pts")
 
     mean = np.nanmean(means)
     plot.plot([hours[0], hours[len(hours)-1]],[mean, mean], lw=1)
@@ -634,9 +657,6 @@ def plot_months(monthlyStats):
         stats = month.stats
         statistics = stats.statistics
 
-        # month = str(stats.starttime)[5:7]
-        # year = str(stats.starttime)[:4]
-        # start = year + "." + month
         start = stats.starttime
         months.append(start)
 
