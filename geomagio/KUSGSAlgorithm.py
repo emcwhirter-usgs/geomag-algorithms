@@ -110,7 +110,7 @@ def clean_MHVs(timeseries):
 
     # timeseries.plot() # This doesn't show anything
     # trace.plot()      # This also shows nothing...
-    # print_months(monthlyStats)
+    print_months(monthlyStats)
     plot_months(monthBefore, monthlyStats)
 
     # print_days(dailyStats)
@@ -411,7 +411,7 @@ def print_all(stats):
     print "Std Dev of all Minutes: " + str(statistics['standarddeviation']) + "nT"
     print "Range of all Minutes  : " + str(statistics['maximum'] - statistics['minimum']) + "nT"
 
-def kSubplot(fig, num, title, timeList, rLabel, mLabel):
+def kSubplot(fig, num, title, timeList, rLabel, mLabel, color='b', marker='s'):
     """
         fig - instance of plot.figure
         num - subplot rows, columns and position
@@ -419,6 +419,8 @@ def kSubplot(fig, num, title, timeList, rLabel, mLabel):
         timeList - array of times and stats to use for plot
         rLabel - Range label
         mLabel - Mean label
+        color - marker color
+        marker - marker style/shape
     """
     means = []
     times = []
@@ -426,18 +428,18 @@ def kSubplot(fig, num, title, timeList, rLabel, mLabel):
 
     subplot = fig.add_subplot(num)
     subplot.set_title(title)
-    # subplot.set_xticks(ticks)
     subplot.xaxis.set_major_formatter(DateFormatter('%b %y'))
     fig.autofmt_xdate(rotation=45)
 
     for time in timeList:
         times.append(time.stats.starttime)
         means.append(time.stats.statistics['average'])
-        ranges.append(time.stats.statistics['maximum']-time.stats.statistics['minimum'])
+        ranges.append(time.stats.statistics['maximum']
+                - time.stats.statistics['minimum'])
     times = matplotlib.dates.date2num(times)
 
     plot.errorbar(times, means, ranges, color='cyan', label=rLabel)
-    plot.plot(times, means, 'bs', label=mLabel)
+    plot.plot(times, means, color=color, marker=marker, label=mLabel)
 
     pts = 0
     for mean in means:
@@ -451,7 +453,7 @@ def kSubplot(fig, num, title, timeList, rLabel, mLabel):
     stddev = np.nanmax(means) - np.nanmin(means)
     lower = mean - 0.5*stddev
     upper = mean + 0.5*stddev
-    plot.fill_between(times, lower, upper, facecolor='red', alpha=0.1)
+    plot.fill_between(times, lower, upper, facecolor='red', alpha=0.05)
     lower = mean - 1.0*stddev
     upper = mean + 1.0*stddev
     plot.fill_between(times, lower, upper, facecolor='orange', alpha=0.1)
@@ -459,58 +461,83 @@ def kSubplot(fig, num, title, timeList, rLabel, mLabel):
     upper = mean + 2.0*stddev
     plot.fill_between(times, lower, upper, facecolor='yellow', alpha=0.1)
 
-def plot_all(monthBefore, monthAfter, dayBefore, dayAfter, hourBefore, hourAfter):
-    figure = plot.figure('Average nT Values')
+def plot_all(monBefore, monAfter, dayBefore, dayAfter, hourBefore, hourAfter):
+    """
+        monBefore - array of monthly statistics before cleaning
+        monAfter - array of monthly statistics after cleaning
+        dayBefore - array of daily statistics before cleaning
+        dayAfter - array of daily statistics after cleaning
+        hourBefore - array of hourly statistics before cleaning
+        hourAfter - array of hourly statistics after cleaning
+    """
+    fig = plot.figure('Average nT Values')
+
+    monthTitle = 'Monthly means (nT)'
+    dayTitle = 'Daily means (nT)'
+    hourTitle = 'Hourly means (nT)'
+
+    monthLabel = 'Daily mean range'
+    dayLabel = 'Hourly mean range'
+    hourLabel = 'Minute range'
 
     ### Set up all of the plots BEFORE the data has been cleaned. ###
     # Plot MONTHS before cleaning
-    kSubplot(figure, 231, 'Monthly means (nT)', monthBefore, 'Daily mean range', 'Month')
+    kSubplot(fig, 231, monthTitle, monBefore, monthLabel, 'Month', 'blue', 's')
 
     # Plot DAYS before cleaning
-    kSubplot(figure, 232, 'Daily means (nT)', dayBefore, 'Hourly mean range', 'Day')
+    kSubplot(fig, 232, dayTitle, dayBefore, dayLabel, 'Day', 'blue', '^')
 
     # Plot HOURS before cleaning
-    kSubplot(figure, 233, 'Hourly means (nT)', hourBefore, 'Minute range', 'Hour')
+    kSubplot(fig, 233, hourTitle, hourBefore, hourLabel, 'Hour', 'blue', '+')
 
     #### Set up all of the plots AFTER the data has been cleaned. ###
     # Plot MONTHS after cleaning
-    kSubplot(figure, 234, 'Monthly means (nT)', monthAfter, 'Daily mean range', 'Month')
+    kSubplot(fig, 234, monthTitle, monAfter, monthLabel, 'Month', 'green', 's')
 
     # Plot DAYS after cleaning
-    kSubplot(figure, 235, 'Daily means (nT)', dayAfter, 'Hourly mean range', 'Day')
+    kSubplot(fig, 235, dayTitle, dayAfter, dayLabel, 'Day', 'green', '^')
 
     # Plot HOURS after cleaning
-    kSubplot(figure, 236, 'Hourly means (nT)', hourAfter, 'Minute range', 'Hour')
+    kSubplot(fig, 236, hourTitle, hourAfter, hourLabel, 'Hour', 'green', '+')
 
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
     plot.show()
 
-def plot_months(monthBefore, monthAfter):
-    figure = plot.figure('Average monthly nT Values')
+def plot_months(monBefore, monAfter):
+    fig = plot.figure('Average monthly nT Values')
 
-    kSubplot(figure, 211, 'Monthly means (nT)', monthBefore, 'Daily mean range', 'Month')
-    kSubplot(figure, 212, 'Monthly means (nT)', monthAfter, 'Daily mean range', 'Month')
+    monthTitle = 'Monthly means (nT)'
+    monthLabel = 'Daily mean range'
+
+    kSubplot(fig, 211, monthTitle, monBefore, monthLabel, 'Month', 'blue', 's')
+    kSubplot(fig, 212, monthTitle, monAfter, monthLabel, 'Month', 'green', 's')
 
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
     plot.show()
 
 def plot_days(dayBefore, dayAfter):
-    figure = plot.figure('Average daily nT Values')
+    fig = plot.figure('Average daily nT Values')
 
-    kSubplot(figure, 211, 'Daily means (nT)', dayBefore, 'Hourly mean range', 'Day')
-    kSubplot(figure, 212, 'Daily means (nT)', dayAfter, 'Hourly mean range', 'Day')
+    dayTitle = 'Daily means (nT)'
+    dayLabel = 'Hourly mean range'
+
+    kSubplot(fig, 211, dayTitle, dayBefore, dayLabel, 'Day', 'blue', '^')
+    kSubplot(fig, 212, dayTitle, dayAfter, dayLabel, 'Day', 'green', '^')
 
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
     plot.show()
 
 def plot_hours(hourBefore, hourAfter):
-    figure = plot.figure('MHVs (Mean Hourly nT Values)')
+    fig = plot.figure('MHVs (Mean Hourly nT Values)')
 
-    kSubplot(figure, 211, 'Hourly means (nT)', hourBefore, 'Minute mean range', 'Hour')
-    kSubplot(figure, 212, 'Hourly means (nT)', hourAfter, 'Minute range', 'Hour')
+    hourTitle = 'Hourly means (nT)'
+    hourLabel = 'Minute range'
+
+    kSubplot(fig, 211, hourTitle, hourBefore, hourLabel, 'Hour', 'blue', '+')
+    kSubplot(fig, 212, hourTitle, hourAfter, hourLabel, 'Hour', 'green', '+')
 
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
@@ -528,7 +555,8 @@ def print_months(monthlyStats):
         print "  Month          : " + str(stats.starttime)
         print "  Monthly Average: " + str(statistics['average'])
         print "  Monthly Std Dev: " + str(statistics['standarddeviation'])
-        print "  Monthly Range  : " + str(statistics['maximum'] - statistics['minimum']) + "\n"
+        print "  Monthly Range  : " + str(statistics['maximum']
+            - statistics['minimum']) + "\n"
 
 def print_days(dailyStats):
     ### Example output ###
@@ -542,7 +570,8 @@ def print_days(dailyStats):
         print "    Day          : " + str(stats.starttime)
         print "    Daily Average: " + str(statistics['average'])
         print "    Daily Std Dev: " + str(statistics['standarddeviation'])
-        print "    Daily Range  : " + str(statistics['maximum'] - statistics['minimum']) + "\n"
+        print "    Daily Range  : " + str(statistics['maximum']
+            - statistics['minimum']) + "\n"
 
 def print_hours(hourlyStats):
     ### Example output ###
@@ -556,4 +585,5 @@ def print_hours(hourlyStats):
         print "      Hour          : " + str(stats.starttime)
         print "      Hourly Average: " + str(statistics['average'])
         print "      Hourly Std Dev: " + str(statistics['standarddeviation'])
-        print "      Hourly Range  : " + str(statistics['maximum'] - statistics['minimum']) + "\n"
+        print "      Hourly Range  : " + str(statistics['maximum']
+            - statistics['minimum']) + "\n"
