@@ -117,7 +117,7 @@ def clean_MHVs(timeseries):
     # plot_days(dayBefore, dailyStats)
 
     # print_hours(hourlyStats)
-    # plot_hours(hourBefore, hourlyStats)
+    plot_hours(hourBefore, hourlyStats)
 
     print_all(trace.stats)
     plot_all(monthBefore, monthlyStats, dayBefore, dailyStats, hourBefore, hourlyStats)
@@ -402,12 +402,18 @@ def plot_all(monBefore, monAfter, dayBefore, dayAfter, hourBefore, hourAfter):
 
         Parameters
         ----------
-        monBefore : array of monthly statistics before cleaning
-        monAfter : array of monthly statistics after cleaning
-        dayBefore : array of daily statistics before cleaning
-        dayAfter : array of daily statistics after cleaning
-        hourBefore : array of hourly statistics before cleaning
-        hourAfter : array of hourly statistics after cleaning
+        monBefore : List <obspy.core.trac.Trace>
+            List of monthly statistics before cleaning
+        monAfter : List <obspy.core.trac.Trace>
+            List of monthly statistics after cleaning
+        dayBefore : List <obspy.core.trac.Trace>
+            List of daily statistics before cleaning
+        dayAfter : List <obspy.core.trac.Trace>
+            List of daily statistics after cleaning
+        hourBefore : List <obspy.core.trac.Trace>
+            List of hourly statistics before cleaning
+        hourAfter : List <obspy.core.trac.Trace>
+            List of hourly statistics after cleaning
     """
     fig = plot.figure('Average nT Values')
 
@@ -449,8 +455,10 @@ def plot_days(dayBefore, dayAfter):
 
         Parameters
         ----------
-        dayBefore :
-        dayAfter :
+        dayBefore : List <obspy.core.trac.Trace>
+            List of daily statistics before cleaning
+        dayAfter : List <obspy.core.trac.Trace>
+            List of daily statistics after cleaning
     """
     fig = plot.figure('Average daily nT Values')
 
@@ -470,8 +478,10 @@ def plot_hours(hourBefore, hourAfter):
 
         Parameters
         ----------
-        hourBefore :
-        hourAfter :
+        hourBefore : List <obspy.core.trac.Trace>
+            List of hourly statistics before cleaning
+        hourAfter : List <obspy.core.trac.Trace>
+            List of hourly statistics after cleaning
     """
     fig = plot.figure('MHVs (Mean Hourly nT Values)')
 
@@ -482,8 +492,10 @@ def plot_hours(hourBefore, hourAfter):
     kSubplot(fig, 212, hourTitle, hourAfter, hourLabel, 'Hour', 'green', '+')
 
     mng = plot.get_current_fig_manager()
+    print "yes"
     mng.window.showMaximized()
     plot.show()
+    print "no"
 
 def plot_months(monBefore, monAfter):
     """
@@ -491,8 +503,10 @@ def plot_months(monBefore, monAfter):
 
         Parameters
         ----------
-        monBefore :
-        monAfter :
+        monBefore : List <obspy.core.trac.Trace>
+            List of monthly statistics before cleaning
+        monAfter : List <obspy.core.trac.Trace>
+            List of monthly statistics after cleaning
     """
     fig = plot.figure('Average monthly nT Values')
 
@@ -512,7 +526,8 @@ def print_all(stats):
 
         Parameters
         ----------
-        stats :
+        stats : trace.stats
+
     """
     statistics = stats.statistics
     print "Start Time            : " + str(stats.starttime)
@@ -601,10 +616,12 @@ def slice_days(days, dailyStats, trace):
 
         Parameters
         ----------
-        days : array of days UTC
+        days :
+            array of days UTC
         dailyStats : List <obspy.core.trac.Trace>
             List of daily statistics
-        trace : a time-series trace of data
+        trace :
+            a time-series trace of data
     """
     for day in days:
         end = np.datetime64(day) + ONEDAY - ONEMINUTE
@@ -626,10 +643,12 @@ def slice_hours(hours, hourlyStats, trace):
 
         Parameters
         ----------
-        hours : array of days UTC
+        hours :
+            array of days UTC
         hourlyStats : List <obspy.core.trac.Trace>
             List of hourly statistics
-        trace : a time-series trace of data
+        trace :
+            a time-series trace of data
     """
     for day in hours:
         for hour in day:
@@ -652,10 +671,12 @@ def slice_months(months, monthlyStats, trace):
 
         Parameters
         ----------
-        months : array of months UTC
+        months :
+            array of months UTC
         monthlyStats : List <obspy.core.trac.Trace>
             List of monthly statistics
-        trace : a time-series trace of data
+        trace :
+            a time-series trace of data
     """
     for month in months:
         # Numpy doesn't know how to add a month...so work-around.
@@ -695,6 +716,7 @@ def statistics(trace):
         Parameters
         ----------
         trace :
+            a time series of data
     """
     H = trace.data
 
