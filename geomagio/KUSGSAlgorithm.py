@@ -124,8 +124,9 @@ def clean_MHVs(timeseries):
 
 def clean_hours(hourlyStats, monthlyStats, rangeLimit=1.0):
     """
-        Replace any hours within each month that have a range that is TODO
-        extreme with NaN.
+        Replace any hours within each month that have a range of minutes that
+        is too extreme with NaN. Too extreme is defined by standard deviations
+        of all minutes minutes within a month.
 
         Parameters
         ----------
@@ -492,10 +493,8 @@ def plot_hours(hourBefore, hourAfter):
     kSubplot(fig, 212, hourTitle, hourAfter, hourLabel, 'Hour', 'green', '+')
 
     mng = plot.get_current_fig_manager()
-    print "yes"
     mng.window.showMaximized()
     plot.show()
-    print "no"
 
 def plot_months(monBefore, monAfter):
     """
