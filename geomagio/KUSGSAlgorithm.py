@@ -106,20 +106,29 @@ def clean_MHVs(timeseries):
     slice_hours(hours, hourlyStats, trace)
     hourBefore = copy.deepcopy(hourlyStats)
 
-    clean_hours(hourBefore, hourlyStats, monthlyStats)
+    clean_range(hourBefore, hourlyStats, monthlyStats)
+
+    clean_distribution(hourBefore, hourlyStats, monthlyStats)
+
+    # plot_days(dayBefore, dailyStats, 'Input data', 'After')
+    # print_days(dailyStats, 'wide')
 
     # timeseries.plot() # This doesn't show anything
     # trace.plot()      # This also shows nothing...
     # print_months(monthlyStats)
     # plot_months(monthBefore, monthlyStats)
 
-    # print_days(dailyStats)
-    # plot_days(dayBefore, dailyStats)
-
     print_all(trace.stats)
     plot_all(monthBefore, monthlyStats, dayBefore, dailyStats, hourBefore, hourlyStats)
 
-def clean_hours(hourBefore, hourlyStats, monthlyStats, rangeLimit=1.0):
+def clean_distribution(hourBefore, hourlyStats, monthlyStats):
+    print "cleaning distribution"
+    # Uncomment to see hour data printed and/or plotted for evalutating.
+    # plot_hours(hourBefore, hourlyStats, 'Raw input data',
+    #     'After removing MHVs at tails of distribution')
+    # print_hours(hourlyStats, 'wide')
+
+def clean_range(hourBefore, hourlyStats, monthlyStats, rangeLimit=1.0):
     """
         Replace any hours within each month that have a range of minutes that
         is too extreme with NaN. Too extreme is defined by standard deviations
@@ -424,8 +433,8 @@ def plot_all(monBefore, monAfter, dayBefore, dayAfter, hourBefore, hourAfter):
     dayTitle = 'Daily means (nT)'
     hourTitle = 'Hourly means (nT)'
 
-    monthLabel = 'Daily mean range'
-    dayLabel = 'Hourly mean range'
+    monthLabel = 'Daily Mean Range'
+    dayLabel = 'Hourly Mean Range'
     hourLabel = 'Minute Range'
 
     ### Set up all of the plots BEFORE the data has been cleaned. ###
@@ -452,7 +461,7 @@ def plot_all(monBefore, monAfter, dayBefore, dayAfter, hourBefore, hourAfter):
     mng.window.showMaximized()
     plot.show()
 
-def plot_days(dayBefore, dayAfter):
+def plot_days(dayBefore, dayAfter, beforeTitle='', afterTitle=''):
     """
         Plot daily statistics before and after cleaning.
 
@@ -462,14 +471,21 @@ def plot_days(dayBefore, dayAfter):
             List of daily statistics before cleaning
         dayAfter : List <obspy.core.trac.Trace>
             List of daily statistics after cleaning
+        beforeTitle: String
+            Title description to append to "before" plot title
+        afterTitle: String
+            Title description to append to "after" plot title
     """
     fig = plot.figure('Average daily nT Values')
 
-    dayTitle = 'Daily means (nT)'
-    dayLabel = 'Hourly mean range'
+    dayTitle = ' - Daily means (nT)'
+    dayLabel = 'Hourly Mean Range'
 
-    kSubplot(fig, 211, dayTitle, dayBefore, dayLabel, 'Day', 'blue', '^')
-    kSubplot(fig, 212, dayTitle, dayAfter, dayLabel, 'Day', 'green', '^')
+    beforeTitle = beforeTitle + dayTitle
+    afterTitle = afterTitle + dayTitle
+
+    kSubplot(fig, 211, beforeTitle, dayBefore, dayLabel, 'Day', 'blue', '^')
+    kSubplot(fig, 212, afterTitle, dayAfter, dayLabel, 'Day', 'green', '^')
 
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
@@ -485,6 +501,10 @@ def plot_hours(hourBefore, hourAfter, beforeTitle='', afterTitle=''):
             List of hourly statistics before cleaning
         hourAfter : List <obspy.core.trac.Trace>
             List of hourly statistics after cleaning
+        beforeTitle: String
+            Title description to append to "before" plot title
+        afterTitle: String
+            Title description to append to "after" plot title
     """
     fig = plot.figure('MHVs (Mean Hourly nT Values)')
 
@@ -544,7 +564,7 @@ def print_all(stats):
     print "Range of all Minutes  : " \
         + str(statistics['maximum'] - statistics['minimum']) + "nT"
 
-def print_days(dailyStats):
+def print_days(dailyStats, format='wide'):
     """
         Print statistics for each day to terminal.
         ### Example output ###
@@ -557,15 +577,24 @@ def print_days(dailyStats):
         ----------
         dailyStats : List <obspy.core.trac.Trace>
             List of daily statistics
+        wide : String
+            If 'wide', print more horizontal, else print more vertical.
     """
     for day in dailyStats:
         stats = day.stats
         statistics = stats.statistics
-        print "    Day          : " + str(stats.starttime)
-        print "    Daily Average: " + str(statistics['average'])
-        print "    Daily Std Dev: " + str(statistics['standarddeviation'])
-        print "    Daily Range  : " + str(statistics['maximum'] \
-            - statistics['minimum']) + "\n"
+        if format == 'wide':
+            print "  Day: " + str(stats.starttime) \
+                  + "\tDay Avg: " + str(statistics['average']) \
+                  + "\tDay Std Dev: " + str(statistics['standarddeviation']) \
+                  + "\tDay Range : " + str(statistics['maximum'] \
+                  - statistics['minimum'])
+        else:
+            print "    Day          : " + str(stats.starttime)
+            print "    Daily Average: " + str(statistics['average'])
+            print "    Daily Std Dev: " + str(statistics['standarddeviation'])
+            print "    Daily Range  : " + str(statistics['maximum'] \
+                - statistics['minimum']) + "\n"
 
 def print_hours(hourlyStats, format='wide'):
     """
