@@ -13,7 +13,7 @@ from geomagio import TimeseriesFactoryException
 import copy
 
 MINUTESPERHOUR = 60
-MINUTESPERDAY = 1440  # 24h * 60min
+MINUTESPERDAY = 1440                # 24h * 60min
 ONEDAY = np.timedelta64(1, 'D')
 ONEMINUTE = np.timedelta64(1, 'm')
 ONEHOUR = np.timedelta64(1, 'h')
@@ -106,7 +106,7 @@ def clean_MHVs(timeseries):
     slice_hours(hours, hourlyStats, trace)
     hourBefore = copy.deepcopy(hourlyStats)
 
-    clean_hours(hourlyStats, monthlyStats)
+    clean_hours(hourBefore, hourlyStats, monthlyStats)
 
     # timeseries.plot() # This doesn't show anything
     # trace.plot()      # This also shows nothing...
@@ -116,13 +116,10 @@ def clean_MHVs(timeseries):
     # print_days(dailyStats)
     # plot_days(dayBefore, dailyStats)
 
-    # print_hours(hourlyStats)
-    plot_hours(hourBefore, hourlyStats)
-
     print_all(trace.stats)
     plot_all(monthBefore, monthlyStats, dayBefore, dailyStats, hourBefore, hourlyStats)
 
-def clean_hours(hourlyStats, monthlyStats, rangeLimit=1.0):
+def clean_hours(hourBefore, hourlyStats, monthlyStats, rangeLimit=1.0):
     """
         Replace any hours within each month that have a range of minutes that
         is too extreme with NaN. Too extreme is defined by standard deviations
@@ -136,7 +133,8 @@ def clean_hours(hourlyStats, monthlyStats, rangeLimit=1.0):
             List of monthly statistics
         rangeLimit : Float
             Number of standard deviations (from the monthly statistics) to
-            use as the acceptable range of hours within the month.
+            use as the acceptable range of hours within the month. Default is
+            1 Standard Deviation.
     """
     print "#####  Cleaning MHVs  #####"
 
@@ -174,6 +172,10 @@ def clean_hours(hourlyStats, monthlyStats, rangeLimit=1.0):
     print str(nanMhvCount) + " Total NaN MHVs found."
 
     print "#####  MHVs Cleaned  #####\n"
+    # Uncomment to see hour data printed and/or plotted for evalutating.
+    # plot_hours(hourBefore, hourlyStats, 'Raw input data',
+    #     'After removing large minute ranges')
+    # print_hours(hourlyStats, 'wide')
 
 def clean_hours_other(hourlyStats, monthlyStats, rangeLimit=2.0):
     """
@@ -424,7 +426,7 @@ def plot_all(monBefore, monAfter, dayBefore, dayAfter, hourBefore, hourAfter):
 
     monthLabel = 'Daily mean range'
     dayLabel = 'Hourly mean range'
-    hourLabel = 'Minute range'
+    hourLabel = 'Minute Range'
 
     ### Set up all of the plots BEFORE the data has been cleaned. ###
     # Plot MONTHS before cleaning
@@ -434,7 +436,7 @@ def plot_all(monBefore, monAfter, dayBefore, dayAfter, hourBefore, hourAfter):
     kSubplot(fig, 232, dayTitle, dayBefore, dayLabel, 'Day', 'blue', '^')
 
     # Plot HOURS before cleaning
-    kSubplot(fig, 233, hourTitle, hourBefore, hourLabel, 'Hour', 'blue', '+')
+    kSubplot(fig, 233, hourTitle, hourBefore, hourLabel, 'MHVs', 'blue', '+')
 
     #### Set up all of the plots AFTER the data has been cleaned. ###
     # Plot MONTHS after cleaning
@@ -444,7 +446,7 @@ def plot_all(monBefore, monAfter, dayBefore, dayAfter, hourBefore, hourAfter):
     kSubplot(fig, 235, dayTitle, dayAfter, dayLabel, 'Day', 'green', '^')
 
     # Plot HOURS after cleaning
-    kSubplot(fig, 236, hourTitle, hourAfter, hourLabel, 'Hour', 'green', '+')
+    kSubplot(fig, 236, hourTitle, hourAfter, hourLabel, 'MHVs', 'green', '+')
 
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
@@ -473,7 +475,7 @@ def plot_days(dayBefore, dayAfter):
     mng.window.showMaximized()
     plot.show()
 
-def plot_hours(hourBefore, hourAfter):
+def plot_hours(hourBefore, hourAfter, beforeTitle='', afterTitle=''):
     """
         Plot hourly statistics before and after cleaning.
 
@@ -486,11 +488,14 @@ def plot_hours(hourBefore, hourAfter):
     """
     fig = plot.figure('MHVs (Mean Hourly nT Values)')
 
-    hourTitle = 'Hourly means (nT)'
-    hourLabel = 'Minute range'
+    hourTitle = ' - Hourly means (nT)'
+    hourLabel = 'Minute Range'
 
-    kSubplot(fig, 211, hourTitle, hourBefore, hourLabel, 'Hour', 'blue', '+')
-    kSubplot(fig, 212, hourTitle, hourAfter, hourLabel, 'Hour', 'green', '+')
+    beforeTitle = beforeTitle + hourTitle
+    afterTitle = afterTitle + hourTitle
+
+    kSubplot(fig, 211, beforeTitle, hourBefore, hourLabel, 'MHVs', 'blue', '+')
+    kSubplot(fig, 212, afterTitle, hourAfter, hourLabel, 'MHVs', 'green', '+')
 
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
@@ -562,7 +567,7 @@ def print_days(dailyStats):
         print "    Daily Range  : " + str(statistics['maximum'] \
             - statistics['minimum']) + "\n"
 
-def print_hours(hourlyStats):
+def print_hours(hourlyStats, format='wide'):
     """
         Print statistics for each hour to terminal.
         ### Example output ###
@@ -575,15 +580,24 @@ def print_hours(hourlyStats):
         ----------
         hourlyStats : List <obspy.core.trac.Trace>
             List of hourly statistics
+        wide : String
+            If 'wide', print more horizontal, else print more vertical.
     """
     for hour in hourlyStats:
         stats = hour.stats
         statistics = stats.statistics
-        print "      Hour          : " + str(stats.starttime)
-        print "      Hourly Average: " + str(statistics['average'])
-        print "      Hourly Std Dev: " + str(statistics['standarddeviation'])
-        print "      Hourly Range  : " + str(statistics['maximum'] \
-            - statistics['minimum']) + "\n"
+        if format == 'wide':
+            print "   Hour: " + str(stats.starttime) \
+                + "\t Avg: " + str(statistics['average']) \
+                + "\t   Std Dev: " + str(statistics['standarddeviation']) \
+                + "\t Range: " + str(statistics['maximum'] \
+                - statistics['minimum'])
+        else:
+            print "      Hour          : " + str(stats.starttime)
+            print "      Hourly Average: " + str(statistics['average'])
+            print "      Hourly Std Dev: " + str(statistics['standarddeviation'])
+            print "      Hourly Range  : " + str(statistics['maximum'] \
+                - statistics['minimum']) + "\n"
 
 def print_months(monthlyStats):
     """
