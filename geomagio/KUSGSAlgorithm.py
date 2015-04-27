@@ -7,7 +7,7 @@ import obspy.core
 import obspy.core.utcdatetime as UTC
 import matplotlib
 import matplotlib.pyplot as plot
-from matplotlib.dates import DateFormatter
+from matplotlib.dates import DateFormatter, WeekdayLocator, DayLocator, MONDAY
 from Algorithm import Algorithm
 from geomagio import TimeseriesFactoryException
 import copy
@@ -104,10 +104,11 @@ def clean_MHVs(timeseries):
 
     hourlyStats = []
     slice_hours(hours, hourlyStats, trace)
-    hourBefore = copy.deepcopy(hourlyStats)
 
+    hourBefore = copy.deepcopy(hourlyStats)
     clean_range(hourBefore, hourlyStats, monthlyStats)
 
+    hourBefore = copy.deepcopy(hourlyStats)
     clean_distribution(hourBefore, hourlyStats, monthlyStats)
 
     # plot_days(dayBefore, dailyStats, 'Input data', 'After')
@@ -118,15 +119,76 @@ def clean_MHVs(timeseries):
     # print_months(monthlyStats)
     # plot_months(monthBefore, monthlyStats)
 
-    print_all(trace.stats)
-    plot_all(monthBefore, monthlyStats, dayBefore, dailyStats, hourBefore, hourlyStats)
+    # print_all(trace.stats)
+    # plot_all(monthBefore, monthlyStats, dayBefore, dailyStats, hourBefore, hourlyStats)
 
 def clean_distribution(hourBefore, hourlyStats, monthlyStats):
+    """
+    """
     print "cleaning distribution"
+
+    fig = plot.figure("Montly Statistics")
+
+    means = []
+    times = []
+
+    prevMonth = -1
+    monthCount = 0
+
+    for hour in hourlyStats:
+        means.append(hour.stats.statistics['average'])
+        times.append(hour.stats.starttime)
+
+        hourMonth = hour.stats.starttime.month
+        if (prevMonth != hourMonth):
+            if len(times) > 1:
+                dist_subplot(fig, monthlyStats, monthCount, prevTitle, times, means)
+
+            monthCount += 1
+            prevMonth = hourMonth
+            prevTitle = hour.stats.starttime
+            means = []
+            times = []
+
+    # subplot.hist(means)
+    # subplot.hist(hourlyStats)
+
+    dist_subplot(fig, monthlyStats, monthCount, prevTitle, times, means)
+
+    plot.subplots_adjust(hspace=0.3, wspace=0.1)
+    fig.autofmt_xdate(rotation=20)
+    # plot.tight_layout(pad=0.1, w_pad=0.5, h_pad=1.0)
+    mng = plot.get_current_fig_manager()
+    mng.window.showMaximized()
+    plot.show()
+
+    print "done cleaning distribution"
     # Uncomment to see hour data printed and/or plotted for evalutating.
     # plot_hours(hourBefore, hourlyStats, 'Raw input data',
     #     'After removing MHVs at tails of distribution')
     # print_hours(hourlyStats, 'wide')
+
+def dist_subplot(fig, monthlyStats, monthCount, title, times, means):
+    monthTotal = len(monthlyStats)
+
+    subplot = fig.add_subplot(int(str(monthTotal) + "1" + str(monthCount)))
+
+    subplot.set_title(title.strftime('%B %Y'))
+    subplot.xaxis.set_major_locator(DayLocator([1,5,10,15,20,25,30]))
+    subplot.xaxis.set_major_formatter(DateFormatter('%b %d %Y'))
+    subplot.grid(True)
+
+    times = matplotlib.dates.date2num(times)
+    plot.plot(times, means, color='blue', marker='+', label='MHVs')
+
+    pts = 0
+    total = 0
+    for mean in means:
+        total += 1
+        if not np.isnan(mean):
+            pts += 1
+    pts = str(pts) + " / " + str(total) + " pts"
+    plot.legend(loc='best', numpoints=1, frameon=False, title=pts)
 
 def clean_range(hourBefore, hourlyStats, monthlyStats, rangeLimit=1.0):
     """
