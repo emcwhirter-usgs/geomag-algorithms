@@ -147,62 +147,45 @@ def clean_distribution(hourBefore, hourlyStats, monthlyStats, exclude=3.0):
 
     fig = plot.figure("Montly Statistics")
 
-    means = []
-    times = []
+    dist_plot(fig, hourlyStats, monthlyStats, 2, 0)
 
-    prevMonth = -1
-    monthCount = 0
+    for month in monthlyStats:
+        print month.stats.statistics
+    # means = []
+    # times = []
 
-    for hour in hourlyStats:
-        means.append(hour.stats.statistics['average'])
-        times.append(hour.stats.starttime)
+    # prevMonth = -1
+    # monthCount = 0
 
-        hourMonth = hour.stats.starttime.month
-        if (prevMonth != hourMonth):
-            if len(times) > 1:
-                dist_subplot(fig, monthlyStats, monthCount, prevTitle, times, means)
+    # for hour in hourlyStats:
+    #     means.append(hour.stats.statistics['average'])
+    #     times.append(hour.stats.starttime)
 
-            monthCount += 1
-            prevMonth = hourMonth
-            prevTitle = hour.stats.starttime
-            means = []
-            times = []
+    #     hourMonth = hour.stats.starttime.month
+    #     if (prevMonth != hourMonth):
+    #         if len(times) > 1:
+    #             dist_subplot(fig, monthlyStats, monthCount, prevTitle,
+    #                 times, means)
 
-    dist_subplot(fig, monthlyStats, monthCount, prevTitle, times, means)
+    #         monthCount += 1
+    #         prevMonth = hourMonth
+    #         prevTitle = hour.stats.starttime
+    #         means = []
+    #         times = []
 
-    plot.subplots_adjust(hspace=0.3, wspace=0.1)
-    fig.autofmt_xdate(rotation=20)
+    # dist_subplot(fig, monthlyStats, monthCount, prevTitle, times, means)
+    dist_plot(fig, hourlyStats, monthlyStats, 2, 1)
+
+    plot.subplots_adjust(hspace=0.19, wspace=0.01)
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
     plot.show()
 
     print "done cleaning distribution"
     # Uncomment to see hour data printed and/or plotted for evalutating.
-    # plot_hours(hourBefore, hourlyStats, 'Raw input data',
-    #     'After removing MHVs at tails of distribution')
+    plot_hours(hourBefore, hourlyStats, 'Raw input data, entire data range',
+        'After removing MHVs at tails of distribution, entire data range')
     # print_hours(hourlyStats, 'wide')
-
-def dist_subplot(fig, monthlyStats, monthCount, title, times, means):
-    monthTotal = len(monthlyStats)
-
-    subplot = fig.add_subplot(int(str(monthTotal) + "1" + str(monthCount)))
-
-    subplot.set_title(title.strftime('%B %Y'))
-    subplot.xaxis.set_major_locator(DayLocator([1,5,10,15,20,25,30]))
-    subplot.xaxis.set_major_formatter(DateFormatter('%b %d %Y'))
-    subplot.grid(True)
-
-    times = matplotlib.dates.date2num(times)
-    plot.plot(times, means, color='blue', marker='+', label='MHVs')
-
-    pts = 0
-    total = 0
-    for mean in means:
-        total += 1
-        if not np.isnan(mean):
-            pts += 1
-    pts = str(pts) + " / " + str(total) + " pts"
-    plot.legend(loc='best', numpoints=1, frameon=False, title=pts)
 
 def clean_range(hourBefore, hourlyStats, monthlyStats, rangeLimit=1.0):
     """
@@ -335,6 +318,68 @@ def clean_hours_other(hourlyStats, monthlyStats, rangeLimit=2.0):
             print "A MHV needs to be replaced in month " + str(mhv[0])
 
     print "#####  MHVs Cleaned  #####\n"
+
+def dist_plot(fig, hourlyStats, monthlyStats, sets=1, offset=0):
+    means = []
+    times = []
+
+    prevMonth = -1
+    monthCount = 0
+
+    for hour in hourlyStats:
+        means.append(hour.stats.statistics['average'])
+        times.append(hour.stats.starttime)
+
+        hourMonth = hour.stats.starttime.month
+        if (prevMonth != hourMonth):
+            if len(times) > 1:
+                dist_subplot(fig, monthlyStats, monthCount, prevTitle,
+                    times, means, sets, offset)
+
+            monthCount += 1
+            prevMonth = hourMonth
+            prevTitle = hour.stats.starttime
+            means = []
+            times = []
+
+    dist_subplot(fig, monthlyStats, monthCount, prevTitle, times, means,
+        sets, offset)
+
+def dist_subplot(fig, monthlyStats, monthCount, title, times, means, sets, offset):
+    monthTotal = len(monthlyStats)
+
+    print str(sets*monthTotal) + "1" + str(monthCount + offset*monthTotal)
+    subplot = fig.add_subplot(int(str(sets*monthTotal) + "1"
+        + str(monthCount + offset*monthTotal)))
+
+    subplot.set_title("MHVs for " + title.strftime('%B %Y'))
+    subplot.xaxis.set_major_locator(DayLocator([2,5,10,15,20,25,30]))
+    subplot.xaxis.set_major_formatter(DateFormatter('%b %d %Y'))
+    subplot.grid(True)
+
+    times = matplotlib.dates.date2num(times)
+    plot.plot(times, means, color='blue', marker='+', label='MHVs')
+
+    pts = 0
+    total = 0
+    for mean in means:
+        total += 1
+        if not np.isnan(mean):
+            pts += 1
+    pts = str(pts) + " / " + str(total) + " pts (" + str(total/24) + " days)"
+    plot.legend(loc='best', numpoints=1, frameon=False, title=pts)
+
+    mean = np.nanmean(means)
+    plot.plot([times[0], times[len(times)-1]],[mean, mean], lw=1,
+        color='black', label='mean')
+
+    stddev = np.nanmax(means) - np.nanmin(means)
+    lower = mean - 1.0*stddev
+    upper = mean + 1.0*stddev
+    plot.fill_between(times, lower, upper, facecolor='red', alpha=0.1)
+    lower = mean - 2.0*stddev
+    upper = mean + 2.0*stddev
+    plot.fill_between(times, lower, upper, facecolor='yellow', alpha=0.1)
 
 def get_days(starttime, endtime):
     """
