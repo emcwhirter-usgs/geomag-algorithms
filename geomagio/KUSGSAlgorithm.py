@@ -93,10 +93,11 @@ def clean_MHVs(timeseries):
 
     # TODO: Slice month should take in a trace and return a array of traces (stream?)
     #   with 1 trace for each month. Do the same for slice_days.
-    monthTraces = slice_months(months, trace)
+    # monthTraces = slice_months(months, trace)
+    monthTraces = slice_trace(months, trace, 'months')
     monthBefore = copy.deepcopy(monthTraces)
 
-    dayTraces = slice_days(days, trace)
+    dayTraces = slice_trace(days, trace, 'days')
     dayBefore = copy.deepcopy(dayTraces)
 
     hours = []
@@ -794,46 +795,45 @@ def print_months(monthlyStats):
         print "  Monthly Range  : " + str(statistics['maximum'] \
             - statistics['minimum']) + "\n"
 
-def slice_days(days, trace):
-    # TODO: combine into 1 slice object, move complexity to "get" methods, if
-    #    needed.
+def slice_trace(times, trace, interval='days'):
+    # TODO: combine into 1 slice object, move complexity to "get" methods, if needed.
     """
-        Use array of "days" to slice up "trace" and collect daily statistics
-        to be attached to dailyStats.
+        Use array of times to slice up trace and collect statistics.
 
         Parameters
         ----------
-        days :
-            array of days UTC
+        times :
+            array of times UTC
         trace :
             a time-series trace of data
-
+        interval: String
+            Interval to use for trace boundaries
+            'hours', 'days', 'months' accepted
         Returns
         -------
-            array-like list of hourly traces with statistics
+            array-like list of traces with statistics
     """
-    dayTraces = []
-    for day in days:
-        boundaries = get_day_boundaries(day)
+    traces = []
+
+    for time in times:
+        if interval == 'days':
+            boundaries = get_day_boundaries(time)
+        elif interval == 'months':
+            boundaries = get_month_boundaries(time)
+
         starttime = boundaries['starttime']
         endtime = boundaries['endtime']
 
-        thisDay = trace.slice(starttime, endtime)
-        if thisDay.stats.npts != MINUTESPERDAY:
+        thisTrace = trace.slice(starttime, endtime)
+
+        if (interval == 'days') and (thisTrace.stats.npts != MINUTESPERDAY):
             raise TimeseriesFactoryException(
                         'Entire calendar days of minute data required for K.')
-        # end = np.datetime64(day) + ONEDAY - ONEMINUTE
-        # # TODO Look into using the raw time value instead of a string
-        # end = UTC.UTCDateTime(str(end))
 
-        # thisDay = trace.slice(day, end)
-        # if thisDay.stats.npts != MINUTESPERDAY:
-        #     raise TimeseriesFactoryException(
-        #             'Entire calendar days of minute data required for K.')
+        thisTrace.stats.statistics = statistics(thisTrace.data)
+        traces.append(thisTrace)
 
-        thisDay.stats.statistics = statistics(thisDay.data)
-        dayTraces.append(thisDay)
-    return dayTraces
+    return traces
 
 def slice_hours(hours, trace):
     """
@@ -866,34 +866,6 @@ def slice_hours(hours, trace):
             thisHour.stats.statistics = statistics(thisHour.data)
             hourTraces.append(thisHour)
     return hourTraces
-
-def slice_months(months, trace):
-    """
-        Use array of "months" to slice up "trace" and collect montly statistics
-        to be attached to monthlyStats.
-
-        Parameters
-        ----------
-        months :
-            array of months UTC
-        trace :
-            a time-series trace of data
-
-        Returns
-        -------
-            array-like list of monthly traces with statistics
-    """
-    monthTraces = []
-    for month in months:
-        boundaries = get_month_boundaries(month)
-        starttime = boundaries['starttime']
-        endtime = boundaries['endtime']
-
-        thisMonth = trace.slice(starttime, endtime)
-
-        thisMonth.stats.statistics = statistics(thisMonth.data)
-        monthTraces.append(thisMonth)
-    return monthTraces
 
 def statistics(data):
     """
