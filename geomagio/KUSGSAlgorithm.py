@@ -91,6 +91,8 @@ def clean_MHVs(timeseries):
     months = get_months(days)
 
     monthlyStats = []
+    # TODO: Slice month should take in a trace and return a array of traces (stream?)
+    #   with 1 trace for each month. Do the same for slice_days.
     slice_months(months, monthlyStats, trace)
     monthBefore = copy.deepcopy(monthlyStats)
 
@@ -122,7 +124,7 @@ def clean_MHVs(timeseries):
     # print_all(trace.stats)
     # plot_all(monthBefore, monthlyStats, dayBefore, dailyStats, hourBefore, hourlyStats)
 
-def clean_distribution(hourBefore, hourlyStats, monthlyStats, exclude=3.0):
+def clean_distribution(hourBefore, hourlyStats, monthlyStats, exclude=1.0):
     """
         Elminiate any MHVs within a month window that fall in the tails of the
         monthly distribution, which is defined as a number of standard
@@ -149,34 +151,21 @@ def clean_distribution(hourBefore, hourlyStats, monthlyStats, exclude=3.0):
 
     dist_plot(fig, hourlyStats, monthlyStats, 2, 0)
 
-    for month in monthlyStats:
-        print month.stats.statistics
-    # means = []
-    # times = []
+    prevMonth = -1
+    for hour in hourlyStats:
+        hourMonth = hour.stats.starttime.month
+        for month in monthlyStats:
+            if (month == hourMonth):
+                stddev = month.stats.statistics['standarddeviation']
+                avg = month.stats.statistics['average']
+                maximum = avg + stddev * exclude
+                minimum = avg + stddev * exclude
+                if (hour.stats.statistics['average'] > maximum) or (hour.stats.statistics['average'] < minimum):
+                    print "Elminiate point"
 
-    # prevMonth = -1
-    # monthCount = 0
-
-    # for hour in hourlyStats:
-    #     means.append(hour.stats.statistics['average'])
-    #     times.append(hour.stats.starttime)
-
-    #     hourMonth = hour.stats.starttime.month
-    #     if (prevMonth != hourMonth):
-    #         if len(times) > 1:
-    #             dist_subplot(fig, monthlyStats, monthCount, prevTitle,
-    #                 times, means)
-
-    #         monthCount += 1
-    #         prevMonth = hourMonth
-    #         prevTitle = hour.stats.starttime
-    #         means = []
-    #         times = []
-
-    # dist_subplot(fig, monthlyStats, monthCount, prevTitle, times, means)
     dist_plot(fig, hourlyStats, monthlyStats, 2, 1)
 
-    plot.subplots_adjust(hspace=0.19, wspace=0.01)
+    # plot.subplots_adjust(hspace=0.23, wspace=0.01)
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
     plot.show()
@@ -244,8 +233,8 @@ def clean_range(hourBefore, hourlyStats, monthlyStats, rangeLimit=1.0):
 
     print "#####  MHVs Cleaned  #####\n"
     # Uncomment to see hour data printed and/or plotted for evalutating.
-    # plot_hours(hourBefore, hourlyStats, 'Raw input data',
-    #     'After removing large minute ranges')
+    plot_hours(hourBefore, hourlyStats, 'Raw input data',
+        'After removing large minute ranges')
     # print_hours(hourlyStats, 'wide')
 
 def clean_hours_other(hourlyStats, monthlyStats, rangeLimit=2.0):
@@ -348,7 +337,6 @@ def dist_plot(fig, hourlyStats, monthlyStats, sets=1, offset=0):
 def dist_subplot(fig, monthlyStats, monthCount, title, times, means, sets, offset):
     monthTotal = len(monthlyStats)
 
-    print str(sets*monthTotal) + "1" + str(monthCount + offset*monthTotal)
     subplot = fig.add_subplot(int(str(sets*monthTotal) + "1"
         + str(monthCount + offset*monthTotal)))
 
@@ -776,6 +764,8 @@ def print_months(monthlyStats):
             - statistics['minimum']) + "\n"
 
 def slice_days(days, dailyStats, trace):
+    # TODO: combine into 1 slice object, move complexity to "get" methods, if
+    #    needed.
     """
         Use array of "days" to slice up "trace" and collect daily statistics
         to be attached to dailyStats.
@@ -864,6 +854,11 @@ def slice_months(months, monthlyStats, trace):
 
         endtime = np.datetime_as_string(end - ONEMINUTE, timezone='UTC')
         # end work-around
+        # replacement work-around
+        # TODO
+        # use UTCdatetime() to explicitly specify year, month, day, etc.
+        # Then still use logic for month addition. Make own method.
+        # end replacement
 
         starttime = np.datetime_as_string(date, timezone='UTC')
 
@@ -875,6 +870,7 @@ def slice_months(months, monthlyStats, trace):
         monthlyStats.append(thisMonth)
 
 def statistics(trace):
+    # TODO return the statistics object, attach it to the trace outside.
     """
         Calculate average, standard deviation, minimum and maximum on given
         trace, add them to a 'statistics' object and attach them to the trace.
@@ -885,6 +881,7 @@ def statistics(trace):
             a time series of data
     """
     H = trace.data
+    # TODO pull this outside, pass in an array to this method.
 
     mean = np.nanmean(H)
     # Skip some calculations if this entire trace is NaN's.
