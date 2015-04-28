@@ -122,8 +122,26 @@ def clean_MHVs(timeseries):
     # print_all(trace.stats)
     # plot_all(monthBefore, monthlyStats, dayBefore, dailyStats, hourBefore, hourlyStats)
 
-def clean_distribution(hourBefore, hourlyStats, monthlyStats):
+def clean_distribution(hourBefore, hourlyStats, monthlyStats, exclude=3.0):
     """
+        Elminiate any MHVs within a month window that fall in the tails of the
+        monthly distribution, which is defined as a number of standard
+        deviations away from the monthly mean.
+
+        Parameters
+        ----------
+        hourBefore : List <obspy.core.trac.Trace>
+            List of hourly statistics before eliminating points
+        hourlyStats : List <obspy.core.trac.Trace>
+            List of hourly statistics
+        monthlyStats : List <obspy.core.trac.Trace>
+            List of monthly statistics
+        exclude : Float
+            Number of standard deviations (from the monthly statistics) to
+            use as the acceptable range of MHVs within the month. Default is
+            3 Standard Deviations, which should eliminate ~0.3% of the data,
+            assuming a normal distribution, which I'm not sure is a valid
+            assumptions, but it's what the papers say about the algorithm.
     """
     print "cleaning distribution"
 
@@ -150,14 +168,10 @@ def clean_distribution(hourBefore, hourlyStats, monthlyStats):
             means = []
             times = []
 
-    # subplot.hist(means)
-    # subplot.hist(hourlyStats)
-
     dist_subplot(fig, monthlyStats, monthCount, prevTitle, times, means)
 
     plot.subplots_adjust(hspace=0.3, wspace=0.1)
     fig.autofmt_xdate(rotation=20)
-    # plot.tight_layout(pad=0.1, w_pad=0.5, h_pad=1.0)
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
     plot.show()
@@ -194,18 +208,21 @@ def clean_range(hourBefore, hourlyStats, monthlyStats, rangeLimit=1.0):
     """
         Replace any hours within each month that have a range of minutes that
         is too extreme with NaN. Too extreme is defined by standard deviations
-        of all minutes minutes within a month.
+        of all minutes minutes within a month. Also eliminates any hours that
+        have less than 30 minutes of valid (non-NaN) data.
 
         Parameters
         ----------
+        hourBefore : List <obspy.core.trac.Trace>
+            List of hourly statistics before eliminating points
         hourlyStats : List <obspy.core.trac.Trace>
             List of hourly statistics
         monthlyStats : List <obspy.core.trac.Trace>
             List of monthly statistics
         rangeLimit : Float
             Number of standard deviations (from the monthly statistics) to
-            use as the acceptable range of hours within the month. Default is
-            1 Standard Deviation.
+            use as the acceptable range of minutes within each hour in the
+            month. Default is 1 Standard Deviation.
     """
     print "#####  Cleaning MHVs  #####"
 
