@@ -435,6 +435,13 @@ def get_hours(day):
 
     return hours
 
+def get_day_boundaries(day):
+    end = np.datetime64(day) + ONEDAY - ONEMINUTE
+    # TODO Look into using the raw time value instead of a string
+    end = UTC.UTCDateTime(str(end))
+
+    return { 'starttime': day, 'endtime': end }
+
 def get_month_boundaries(month):
     # Numpy doesn't know how to add a month...so work-around.
     date = np.datetime64(month, timezone='UTC')
@@ -452,6 +459,8 @@ def get_month_boundaries(month):
     endOfMonth = np.datetime64(beginNextMonth, timezone='UTC') - ONEMINUTE
     endtime = np.datetime_as_string(endOfMonth, timezone='UTC')
 
+    starttime = UTC.UTCDateTime(str(starttime))
+    endtime = UTC.UTCDateTime(str(endtime))
     return { 'starttime': starttime, 'endtime': endtime }
 
 def get_months(days):
@@ -801,18 +810,26 @@ def slice_days(days, trace):
 
         Returns
         -------
-            array-like list of hourly traces
+            array-like list of hourly traces with statistics
     """
     dayTraces = []
     for day in days:
-        end = np.datetime64(day) + ONEDAY - ONEMINUTE
-        # TODO Look into using the raw time value instead of a string
-        end = UTC.UTCDateTime(str(end))
+        boundaries = get_day_boundaries(day)
+        starttime = boundaries['starttime']
+        endtime = boundaries['endtime']
 
-        thisDay = trace.slice(day, end)
+        thisDay = trace.slice(starttime, endtime)
         if thisDay.stats.npts != MINUTESPERDAY:
             raise TimeseriesFactoryException(
-                    'Entire calendar days of minute data required for K.')
+                        'Entire calendar days of minute data required for K.')
+        # end = np.datetime64(day) + ONEDAY - ONEMINUTE
+        # # TODO Look into using the raw time value instead of a string
+        # end = UTC.UTCDateTime(str(end))
+
+        # thisDay = trace.slice(day, end)
+        # if thisDay.stats.npts != MINUTESPERDAY:
+        #     raise TimeseriesFactoryException(
+        #             'Entire calendar days of minute data required for K.')
 
         thisDay.stats.statistics = statistics(thisDay.data)
         dayTraces.append(thisDay)
@@ -832,7 +849,7 @@ def slice_hours(hours, trace):
 
         Returns
         -------
-            array-like list of hourly traces
+            array-like list of hourly traces with statistics
     """
     hourTraces = []
     for day in hours:
@@ -864,7 +881,7 @@ def slice_months(months, trace):
 
         Returns
         -------
-            array-like list of monthly traces
+            array-like list of monthly traces with statistics
     """
     monthTraces = []
     for month in months:
@@ -872,8 +889,6 @@ def slice_months(months, trace):
         starttime = boundaries['starttime']
         endtime = boundaries['endtime']
 
-        starttime = UTC.UTCDateTime(str(starttime))
-        endtime = UTC.UTCDateTime(str(endtime))
         thisMonth = trace.slice(starttime, endtime)
 
         thisMonth.stats.statistics = statistics(thisMonth.data)
@@ -911,5 +926,4 @@ def statistics(data):
             'minimum': np.nan,
             'standarddeviation': np.nan
         }
-
     return statistics
