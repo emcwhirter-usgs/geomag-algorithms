@@ -91,11 +91,10 @@ def clean_MHVs(timeseries):
 
     months = get_months(days)
 
-    monthlyStats = []
     # TODO: Slice month should take in a trace and return a array of traces (stream?)
     #   with 1 trace for each month. Do the same for slice_days.
-    slice_months(months, monthlyStats, trace)
-    monthBefore = copy.deepcopy(monthlyStats)
+    monthTraces = slice_months(months, trace)
+    monthBefore = copy.deepcopy(monthTraces)
 
     dailyStats = []
     slice_days(days, dailyStats, trace)
@@ -109,21 +108,21 @@ def clean_MHVs(timeseries):
     slice_hours(hours, hourlyStats, trace)
 
     hourBefore = copy.deepcopy(hourlyStats)
-    clean_range(hourBefore, hourlyStats, monthlyStats)
+    clean_range(hourBefore, hourlyStats, monthTraces)
 
     hourBefore = copy.deepcopy(hourlyStats)
-    clean_distribution(hourBefore, hourlyStats, monthlyStats)
+    clean_distribution(hourBefore, hourlyStats, monthTraces)
 
     # plot_days(dayBefore, dailyStats, 'Input data', 'After')
     # print_days(dailyStats, 'wide')
 
     # timeseries.plot() # This doesn't show anything
     # trace.plot()      # This also shows nothing...
-    # print_months(monthlyStats)
-    # plot_months(monthBefore, monthlyStats)
+    # print_months(monthTraces)
+    # plot_months(monthBefore, monthTraces)
 
     # print_all(trace.stats)
-    plot_all(monthBefore, monthlyStats, dayBefore, dailyStats, hourBefore, hourlyStats)
+    plot_all(monthBefore, monthTraces, dayBefore, dailyStats, hourBefore, hourlyStats)
 
 def clean_distribution(hourBefore, hours, months, exclude=1.0):
     """
@@ -437,6 +436,25 @@ def get_hours(day):
         hours.append(hour)
 
     return hours
+
+def get_month_boundaries(month):
+    # Numpy doesn't know how to add a month...so work-around.
+    date = np.datetime64(month, timezone='UTC')
+    starttime = np.datetime_as_string(date, timezone='UTC')
+
+    date = pd.DatetimeIndex([date])
+    month = date.month + 1
+    year = date.year
+
+    if month > 12:
+        month = 1
+        year += 1
+
+    beginNextMonth = UTC.UTCDateTime(year, month, 1)
+    endOfMonth = np.datetime64(beginNextMonth, timezone='UTC') - ONEMINUTE
+    endtime = np.datetime_as_string(endOfMonth, timezone='UTC')
+
+    return { 'starttime': starttime, 'endtime': endtime }
 
 def get_months(days):
     """
@@ -826,7 +844,7 @@ def slice_hours(hours, hourlyStats, trace):
             thisHour.stats.statistics = statistics(thisHour.data)
             hourlyStats.append(thisHour)
 
-def slice_months(months, monthlyStats, trace):
+def slice_months(months, trace):
     """
         Use array of "months" to slice up "trace" and collect montly statistics
         to be attached to monthlyStats.
@@ -839,39 +857,24 @@ def slice_months(months, monthlyStats, trace):
             List of monthly statistics
         trace :
             a time-series trace of data
+
+        Returns
+        -------
+            array-like list of monthly traces with statistics
     """
+    monthlyTraces = []
     for month in months:
         boundaries = get_month_boundaries(month)
         starttime = boundaries['starttime']
         endtime = boundaries['endtime']
-
-        # starttime = np.datetime_as_string(date, timezone='UTC')
 
         starttime = UTC.UTCDateTime(str(starttime))
         endtime = UTC.UTCDateTime(str(endtime))
         thisMonth = trace.slice(starttime, endtime)
 
         thisMonth.stats.statistics = statistics(thisMonth.data)
-        monthlyStats.append(thisMonth)
-
-def get_month_boundaries(month):
-    # Numpy doesn't know how to add a month...so work-around.
-    date = np.datetime64(month, timezone='UTC')
-    starttime = np.datetime_as_string(date, timezone='UTC')
-
-    date = pd.DatetimeIndex([date])
-    month = date.month + 1
-    year = date.year
-
-    if month > 12:
-        month = 1
-        year += 1
-
-    beginNextMonth = UTC.UTCDateTime(year, month, 1)
-    endOfMonth = np.datetime64(beginNextMonth, timezone='UTC') - ONEMINUTE
-    endtime = np.datetime_as_string(endOfMonth, timezone='UTC')
-
-    return { 'starttime': starttime, 'endtime': endtime }
+        monthlyTraces.append(thisMonth)
+    return monthlyTraces
 
 def statistics(data):
     """
@@ -880,7 +883,7 @@ def statistics(data):
 
         Parameters
         ----------
-        trace : <numpy.ndarray>
+        data : <numpy.ndarray>
             an array of time-series data
 
         Returns
