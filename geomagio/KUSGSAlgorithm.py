@@ -96,24 +96,23 @@ def clean_MHVs(timeseries):
     monthTraces = slice_months(months, trace)
     monthBefore = copy.deepcopy(monthTraces)
 
-    dailyStats = []
-    slice_days(days, dailyStats, trace)
-    dayBefore = copy.deepcopy(dailyStats)
+    dayTraces = slice_days(days, trace)
+    dayBefore = copy.deepcopy(dayTraces)
 
     hours = []
     for day in days:
         hours.append(get_hours(day))
 
-    hourlyTraces = slice_hours(hours, trace)
+    hourTraces = slice_hours(hours, trace)
 
-    hourBefore = copy.deepcopy(hourlyTraces)
-    clean_range(hourBefore, hourlyTraces, monthTraces)
+    hourBefore = copy.deepcopy(hourTraces)
+    clean_range(hourBefore, hourTraces, monthTraces)
 
-    hourBefore = copy.deepcopy(hourlyTraces)
-    clean_distribution(hourBefore, hourlyTraces, monthTraces)
+    hourBefore = copy.deepcopy(hourTraces)
+    clean_distribution(hourBefore, hourTraces, monthTraces)
 
-    # plot_days(dayBefore, dailyStats, 'Input data', 'After')
-    # print_days(dailyStats, 'wide')
+    # plot_days(dayBefore, dayTraces, 'Input data', 'After')
+    # print_days(dayTraces, 'wide')
 
     # timeseries.plot() # This doesn't show anything
     # trace.plot()      # This also shows nothing...
@@ -121,7 +120,7 @@ def clean_MHVs(timeseries):
     # plot_months(monthBefore, monthTraces)
 
     # print_all(trace.stats)
-    plot_all(monthBefore, monthTraces, dayBefore, dailyStats, hourBefore, hourlyTraces)
+    plot_all(monthBefore, monthTraces, dayBefore, dayTraces, hourBefore, hourTraces)
 
 def clean_distribution(hourBefore, hours, months, exclude=1.0):
     """
@@ -786,7 +785,7 @@ def print_months(monthlyStats):
         print "  Monthly Range  : " + str(statistics['maximum'] \
             - statistics['minimum']) + "\n"
 
-def slice_days(days, dailyStats, trace):
+def slice_days(days, trace):
     # TODO: combine into 1 slice object, move complexity to "get" methods, if
     #    needed.
     """
@@ -797,11 +796,14 @@ def slice_days(days, dailyStats, trace):
         ----------
         days :
             array of days UTC
-        dailyStats : List <obspy.core.trac.Trace>
-            List of daily statistics
         trace :
             a time-series trace of data
+
+        Returns
+        -------
+            array-like list of hourly traces
     """
+    dayTraces = []
     for day in days:
         end = np.datetime64(day) + ONEDAY - ONEMINUTE
         # TODO Look into using the raw time value instead of a string
@@ -813,7 +815,8 @@ def slice_days(days, dailyStats, trace):
                     'Entire calendar days of minute data required for K.')
 
         thisDay.stats.statistics = statistics(thisDay.data)
-        dailyStats.append(thisDay)
+        dayTraces.append(thisDay)
+    return dayTraces
 
 def slice_hours(hours, trace):
     """
@@ -831,7 +834,7 @@ def slice_hours(hours, trace):
         -------
             array-like list of hourly traces
     """
-    hourlyTraces = []
+    hourTraces = []
     for day in hours:
         for hour in day:
             end = np.datetime64(hour) + ONEHOUR - ONEMINUTE
@@ -844,8 +847,8 @@ def slice_hours(hours, trace):
                         '1 Hour should have 60 minutes.')
 
             thisHour.stats.statistics = statistics(thisHour.data)
-            hourlyTraces.append(thisHour)
-    return hourlyTraces
+            hourTraces.append(thisHour)
+    return hourTraces
 
 def slice_months(months, trace):
     """
@@ -863,7 +866,7 @@ def slice_months(months, trace):
         -------
             array-like list of monthly traces
     """
-    monthlyTraces = []
+    monthTraces = []
     for month in months:
         boundaries = get_month_boundaries(month)
         starttime = boundaries['starttime']
@@ -874,8 +877,8 @@ def slice_months(months, trace):
         thisMonth = trace.slice(starttime, endtime)
 
         thisMonth.stats.statistics = statistics(thisMonth.data)
-        monthlyTraces.append(thisMonth)
-    return monthlyTraces
+        monthTraces.append(thisMonth)
+    return monthTraces
 
 def statistics(data):
     """
