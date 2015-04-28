@@ -11,6 +11,7 @@ from matplotlib.dates import DateFormatter, WeekdayLocator, DayLocator, MONDAY
 from Algorithm import Algorithm
 from geomagio import TimeseriesFactoryException
 import copy
+import pandas as pd
 
 MINUTESPERHOUR = 60
 MINUTESPERDAY = 1440                # 24h * 60min
@@ -840,32 +841,11 @@ def slice_months(months, monthlyStats, trace):
             a time-series trace of data
     """
     for month in months:
-        # Numpy doesn't know how to add a month...so work-around.
-        date = np.datetime64(month, timezone='UTC')
-        monthNum = int(np.datetime_as_string(date)[5:7])
+        boundaries = get_month_boundaries(month)
+        starttime = boundaries['starttime']
+        endtime = boundaries['endtime']
 
-        year = np.datetime_as_string(date, timezone='UTC')[:5]
-
-        if monthNum < 10:
-            monthNum = "0" + str(monthNum+1)
-        elif monthNum < 12:
-            monthNum = str(monthNum + 1)
-        else:
-            monthNum = str("01")
-            year = str(int(year[:4])+1) + "-"
-
-        end = year + monthNum + "-01T00:00:00.000000Z"
-        end = np.datetime64(end, timezone='UTC')
-
-        endtime = np.datetime_as_string(end - ONEMINUTE, timezone='UTC')
-        # end work-around
-        # replacement work-around
-        # TODO
-        # use UTCdatetime() to explicitly specify year, month, day, etc.
-        # Then still use logic for month addition. Make own method.
-        # end replacement
-
-        starttime = np.datetime_as_string(date, timezone='UTC')
+        # starttime = np.datetime_as_string(date, timezone='UTC')
 
         starttime = UTC.UTCDateTime(str(starttime))
         endtime = UTC.UTCDateTime(str(endtime))
@@ -873,6 +853,25 @@ def slice_months(months, monthlyStats, trace):
 
         thisMonth.stats.statistics = statistics(thisMonth.data)
         monthlyStats.append(thisMonth)
+
+def get_month_boundaries(month):
+    # Numpy doesn't know how to add a month...so work-around.
+    date = np.datetime64(month, timezone='UTC')
+    starttime = np.datetime_as_string(date, timezone='UTC')
+
+    date = pd.DatetimeIndex([date])
+    month = date.month + 1
+    year = date.year
+
+    if month > 12:
+        month = 1
+        year += 1
+
+    beginNextMonth = UTC.UTCDateTime(year, month, 1)
+    endOfMonth = np.datetime64(beginNextMonth, timezone='UTC') - ONEMINUTE
+    endtime = np.datetime_as_string(endOfMonth, timezone='UTC')
+
+    return { 'starttime': starttime, 'endtime': endtime }
 
 def statistics(data):
     """
