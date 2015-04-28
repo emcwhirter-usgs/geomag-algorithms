@@ -104,14 +104,13 @@ def clean_MHVs(timeseries):
     for day in days:
         hours.append(get_hours(day))
 
-    hourlyStats = []
-    slice_hours(hours, hourlyStats, trace)
+    hourlyTraces = slice_hours(hours, trace)
 
-    hourBefore = copy.deepcopy(hourlyStats)
-    clean_range(hourBefore, hourlyStats, monthTraces)
+    hourBefore = copy.deepcopy(hourlyTraces)
+    clean_range(hourBefore, hourlyTraces, monthTraces)
 
-    hourBefore = copy.deepcopy(hourlyStats)
-    clean_distribution(hourBefore, hourlyStats, monthTraces)
+    hourBefore = copy.deepcopy(hourlyTraces)
+    clean_distribution(hourBefore, hourlyTraces, monthTraces)
 
     # plot_days(dayBefore, dailyStats, 'Input data', 'After')
     # print_days(dailyStats, 'wide')
@@ -122,7 +121,7 @@ def clean_MHVs(timeseries):
     # plot_months(monthBefore, monthTraces)
 
     # print_all(trace.stats)
-    plot_all(monthBefore, monthTraces, dayBefore, dailyStats, hourBefore, hourlyStats)
+    plot_all(monthBefore, monthTraces, dayBefore, dailyStats, hourBefore, hourlyTraces)
 
 def clean_distribution(hourBefore, hours, months, exclude=1.0):
     """
@@ -816,7 +815,7 @@ def slice_days(days, dailyStats, trace):
         thisDay.stats.statistics = statistics(thisDay.data)
         dailyStats.append(thisDay)
 
-def slice_hours(hours, hourlyStats, trace):
+def slice_hours(hours, trace):
     """
         Use array of "hours" to slice up "trace" and collect hourly statistics
         to be attached to dailyStats.
@@ -825,11 +824,14 @@ def slice_hours(hours, hourlyStats, trace):
         ----------
         hours :
             array of days UTC
-        hourlyStats : List <obspy.core.trac.Trace>
-            List of hourly statistics
         trace :
             a time-series trace of data
+
+        Returns
+        -------
+            array-like list of hourly traces
     """
+    hourlyTraces = []
     for day in hours:
         for hour in day:
             end = np.datetime64(hour) + ONEHOUR - ONEMINUTE
@@ -842,7 +844,8 @@ def slice_hours(hours, hourlyStats, trace):
                         '1 Hour should have 60 minutes.')
 
             thisHour.stats.statistics = statistics(thisHour.data)
-            hourlyStats.append(thisHour)
+            hourlyTraces.append(thisHour)
+    return hourlyTraces
 
 def slice_months(months, trace):
     """
@@ -853,14 +856,12 @@ def slice_months(months, trace):
         ----------
         months :
             array of months UTC
-        monthlyStats : List <obspy.core.trac.Trace>
-            List of monthly statistics
         trace :
             a time-series trace of data
 
         Returns
         -------
-            array-like list of monthly traces with statistics
+            array-like list of monthly traces
     """
     monthlyTraces = []
     for month in months:
