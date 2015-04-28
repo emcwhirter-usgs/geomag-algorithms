@@ -74,7 +74,8 @@ def clean_MHVs(timeseries):
     """
     # type = <class 'obspy.core.trace.Trace'>
     trace = timeseries.select(channel='H')[0]
-    statistics(trace)
+    # statistics(trace)
+    trace.stats.statistics = statistics(trace)
 
     totalMinutes = trace.stats.npts
     # This algorithm operates on entire calendar days of 1-Minute values.
@@ -794,7 +795,8 @@ def slice_days(days, dailyStats, trace):
             raise TimeseriesFactoryException(
                     'Entire calendar days of minute data required for K.')
 
-        statistics(thisDay)
+        # statistics(thisDay)
+        thisDay.stats.statistics = statistics(thisDay)
         dailyStats.append(thisDay)
 
 def slice_hours(hours, hourlyStats, trace):
@@ -822,7 +824,8 @@ def slice_hours(hours, hourlyStats, trace):
                 raise TimeseriesFactoryException(
                         '1 Hour should have 60 minutes.')
 
-            statistics(thisHour)
+            # statistics(thisHour)
+            thisHour.stats.statistics = statistics(thisHour)
             hourlyStats.append(thisHour)
 
 def slice_months(months, monthlyStats, trace):
@@ -871,7 +874,8 @@ def slice_months(months, monthlyStats, trace):
         endtime = UTC.UTCDateTime(str(endtime))
         thisMonth = trace.slice(starttime, endtime)
 
-        statistics(thisMonth)
+        # statistics(thisMonth)
+        thisMonth.stats.statistics = statistics(thisMonth)
         monthlyStats.append(thisMonth)
 
 def statistics(trace):
@@ -884,6 +888,10 @@ def statistics(trace):
         ----------
         trace :
             a time series of data
+
+        Returns
+        -------
+            object with key/value pairs for statistics
     """
     H = trace.data
     # TODO pull this outside, pass in an array to this method.
@@ -892,16 +900,20 @@ def statistics(trace):
     # Skip some calculations if this entire trace is NaN's.
     if not (np.isnan(mean)):
         # Ignoring any NaN's for these calculations.
-        trace.stats.statistics = {
+        # trace.stats.statistics = {
+        statistics = {
             'average': mean,
             'maximum': np.nanmax(H),
             'minimum': np.nanmin(H),
             'standarddeviation': np.nanstd(H)
         }
     else:
-        trace.stats.statistics = {
+        # trace.stats.statistics = {
+        statistics = {
             'average': np.nan,
             'maximum': np.nan,
             'minimum': np.nan,
             'standarddeviation': np.nan
         }
+
+    return statistics
