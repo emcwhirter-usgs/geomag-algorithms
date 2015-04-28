@@ -124,7 +124,7 @@ def clean_MHVs(timeseries):
     # print_all(trace.stats)
     # plot_all(monthBefore, monthlyStats, dayBefore, dailyStats, hourBefore, hourlyStats)
 
-def clean_distribution(hourBefore, hourlyStats, monthlyStats, exclude=1.0):
+def clean_distribution(hourBefore, hours, months, exclude=1.0):
     """
         Elminiate any MHVs within a month window that fall in the tails of the
         monthly distribution, which is defined as a number of standard
@@ -134,10 +134,10 @@ def clean_distribution(hourBefore, hourlyStats, monthlyStats, exclude=1.0):
         ----------
         hourBefore : List <obspy.core.trac.Trace>
             List of hourly statistics before eliminating points
-        hourlyStats : List <obspy.core.trac.Trace>
-            List of hourly statistics
-        monthlyStats : List <obspy.core.trac.Trace>
-            List of monthly statistics
+        hours : List <obspy.core.trac.Trace>
+            List of hourly traces with statistics
+        months : List <obspy.core.trac.Trace>
+            List of monthly traces statistics
         exclude : Float
             Number of standard deviations (from the monthly statistics) to
             use as the acceptable range of MHVs within the month. Default is
@@ -149,12 +149,12 @@ def clean_distribution(hourBefore, hourlyStats, monthlyStats, exclude=1.0):
 
     fig = plot.figure("Montly Statistics")
 
-    dist_plot(fig, hourlyStats, monthlyStats, 2, 0)
+    dist_plot(fig, hours, months, 2, 0)
 
     prevMonth = -1
-    for hour in hourlyStats:
+    for hour in hours:
         hourMonth = hour.stats.starttime.month
-        for month in monthlyStats:
+        for month in months:
             if (month == hourMonth):
                 stddev = month.stats.statistics['standarddeviation']
                 avg = month.stats.statistics['average']
@@ -163,7 +163,7 @@ def clean_distribution(hourBefore, hourlyStats, monthlyStats, exclude=1.0):
                 if (hour.stats.statistics['average'] > maximum) or (hour.stats.statistics['average'] < minimum):
                     print "Elminiate point"
 
-    dist_plot(fig, hourlyStats, monthlyStats, 2, 1)
+    dist_plot(fig, hours, months, 2, 1)
 
     # plot.subplots_adjust(hspace=0.23, wspace=0.01)
     mng = plot.get_current_fig_manager()
@@ -172,11 +172,11 @@ def clean_distribution(hourBefore, hourlyStats, monthlyStats, exclude=1.0):
 
     print "done cleaning distribution"
     # Uncomment to see hour data printed and/or plotted for evalutating.
-    plot_hours(hourBefore, hourlyStats, 'Raw input data, entire data range',
+    plot_hours(hourBefore, hours, 'Raw input data, entire data range',
         'After removing MHVs at tails of distribution, entire data range')
-    # print_hours(hourlyStats, 'wide')
+    # print_hours(hours, 'wide')
 
-def clean_range(hourBefore, hourlyStats, monthlyStats, rangeLimit=1.0):
+def clean_range(hourBefore, hours, months, rangeLimit=1.0):
     """
         Replace any hours within each month that have a range of minutes that
         is too extreme with NaN. Too extreme is defined by standard deviations
@@ -187,9 +187,9 @@ def clean_range(hourBefore, hourlyStats, monthlyStats, rangeLimit=1.0):
         ----------
         hourBefore : List <obspy.core.trac.Trace>
             List of hourly statistics before eliminating points
-        hourlyStats : List <obspy.core.trac.Trace>
-            List of hourly statistics
-        monthlyStats : List <obspy.core.trac.Trace>
+        hours : List <obspy.core.trac.Trace>
+            List of hourly traces statistics
+        months : List <obspy.core.trac.Trace>
             List of monthly statistics
         rangeLimit : Float
             Number of standard deviations (from the monthly statistics) to
@@ -197,15 +197,20 @@ def clean_range(hourBefore, hourlyStats, monthlyStats, rangeLimit=1.0):
             month. Default is 1 Standard Deviation.
     """
     print "#####  Cleaning MHVs  #####"
-
+    # TODO: simplify this method by not passing in hourBefore, leave the
+    # hours alone return the array.
+    # TODO: Arrays should be hours instead of hourlyStat, months instead of
+    #      months, days instead of dailyStats
+    # TODO: "Here is an array of traces and an acceptable range, clear average
+    #      for any traces that fall outside of this range"
     nanMhvCount = 0
-    for hour in hourlyStats:
+    for hour in hours:
         maximum = hour.stats.statistics['maximum']
         minimum = hour.stats.statistics['minimum']
         hourRange = maximum - minimum
 
         hourMonth = hour.stats.starttime.month
-        for monthStat in monthlyStats:
+        for monthStat in months:
             if monthStat.stats.starttime.month == hourMonth:
                 stdD = monthStat.stats.statistics['standarddeviation']
                 allowedRange = stdD * rangeLimit
@@ -233,11 +238,11 @@ def clean_range(hourBefore, hourlyStats, monthlyStats, rangeLimit=1.0):
 
     print "#####  MHVs Cleaned  #####\n"
     # Uncomment to see hour data printed and/or plotted for evalutating.
-    plot_hours(hourBefore, hourlyStats, 'Raw input data',
+    plot_hours(hourBefore, hours, 'Raw input data',
         'After removing large minute ranges')
-    # print_hours(hourlyStats, 'wide')
+    # print_hours(hours, 'wide')
 
-def clean_hours_other(hourlyStats, monthlyStats, rangeLimit=2.0):
+def clean_hours_other(hours, months, rangeLimit=2.0):
     """
         rangeLimit as number of standard devations from the monthly mean.
             Default is 2 standard deviations on top and bottom of the monthly
@@ -249,13 +254,13 @@ def clean_hours_other(hourlyStats, monthlyStats, rangeLimit=2.0):
     month = 0        # Numerical month value so we can see when it changes.
     monthCount = -1  # Reference the same month until we're done with it.
     monthCounts = [] # List of months ('month') with counts of NaN's.
-    for hour in hourlyStats:
+    for hour in hours:
         maximum = hour.stats.statistics['maximum']
         minimum = hour.stats.statistics['minimum']
         hourRange = maximum - minimum
 
         hourMonth = hour.stats.starttime.month
-        for monthStat in monthlyStats:
+        for monthStat in months:
             if monthStat.stats.starttime.month == hourMonth:
                 stdD = monthStat.stats.statistics['standarddeviation']
                 allowedRange = 2 * stdD * rangeLimit
@@ -308,21 +313,21 @@ def clean_hours_other(hourlyStats, monthlyStats, rangeLimit=2.0):
 
     print "#####  MHVs Cleaned  #####\n"
 
-def dist_plot(fig, hourlyStats, monthlyStats, sets=1, offset=0):
+def dist_plot(fig, hours, months, sets=1, offset=0):
     means = []
     times = []
 
     prevMonth = -1
     monthCount = 0
 
-    for hour in hourlyStats:
+    for hour in hours:
         means.append(hour.stats.statistics['average'])
         times.append(hour.stats.starttime)
 
         hourMonth = hour.stats.starttime.month
         if (prevMonth != hourMonth):
             if len(times) > 1:
-                dist_subplot(fig, monthlyStats, monthCount, prevTitle,
+                dist_subplot(fig, months, monthCount, prevTitle,
                     times, means, sets, offset)
 
             monthCount += 1
@@ -331,11 +336,11 @@ def dist_plot(fig, hourlyStats, monthlyStats, sets=1, offset=0):
             means = []
             times = []
 
-    dist_subplot(fig, monthlyStats, monthCount, prevTitle, times, means,
+    dist_subplot(fig, months, monthCount, prevTitle, times, means,
         sets, offset)
 
-def dist_subplot(fig, monthlyStats, monthCount, title, times, means, sets, offset):
-    monthTotal = len(monthlyStats)
+def dist_subplot(fig, months, monthCount, title, times, means, sets, offset):
+    monthTotal = len(months)
 
     subplot = fig.add_subplot(int(str(sets*monthTotal) + "1"
         + str(monthCount + offset*monthTotal)))
@@ -676,7 +681,7 @@ def print_all(stats):
     print "Range of all Minutes  : " \
         + str(statistics['maximum'] - statistics['minimum']) + "nT"
 
-def print_days(dailyStats, format='wide'):
+def print_days(days, format='wide'):
     """
         Print statistics for each day to terminal.
         ### Example output ###
@@ -687,8 +692,8 @@ def print_days(dailyStats, format='wide'):
 
         Parameters
         ----------
-        dailyStats : List <obspy.core.trac.Trace>
-            List of daily statistics
+        days : List <obspy.core.trac.Trace>
+            List of daily traces with statistics
         wide : String
             If 'wide', print more horizontal, else print more vertical.
     """
@@ -708,7 +713,7 @@ def print_days(dailyStats, format='wide'):
             print "    Daily Range  : " + str(statistics['maximum'] \
                 - statistics['minimum']) + "\n"
 
-def print_hours(hourlyStats, format='wide'):
+def print_hours(hours, format='wide'):
     """
         Print statistics for each hour to terminal.
         ### Example output ###
@@ -719,12 +724,12 @@ def print_hours(hourlyStats, format='wide'):
 
         Parameters
         ----------
-        hourlyStats : List <obspy.core.trac.Trace>
-            List of hourly statistics
+        hours : List <obspy.core.trac.Trace>
+            List of hourly traces with statistics
         wide : String
             If 'wide', print more horizontal, else print more vertical.
     """
-    for hour in hourlyStats:
+    for hour in hours:
         stats = hour.stats
         statistics = stats.statistics
         if format == 'wide':
