@@ -74,8 +74,7 @@ def clean_MHVs(timeseries):
     """
     # type = <class 'obspy.core.trace.Trace'>
     trace = timeseries.select(channel='H')[0]
-    # statistics(trace)
-    trace.stats.statistics = statistics(trace)
+    trace.stats.statistics = statistics(trace.data)
 
     totalMinutes = trace.stats.npts
     # This algorithm operates on entire calendar days of 1-Minute values.
@@ -123,7 +122,7 @@ def clean_MHVs(timeseries):
     # plot_months(monthBefore, monthlyStats)
 
     # print_all(trace.stats)
-    # plot_all(monthBefore, monthlyStats, dayBefore, dailyStats, hourBefore, hourlyStats)
+    plot_all(monthBefore, monthlyStats, dayBefore, dailyStats, hourBefore, hourlyStats)
 
 def clean_distribution(hourBefore, hours, months, exclude=1.0):
     """
@@ -795,8 +794,7 @@ def slice_days(days, dailyStats, trace):
             raise TimeseriesFactoryException(
                     'Entire calendar days of minute data required for K.')
 
-        # statistics(thisDay)
-        thisDay.stats.statistics = statistics(thisDay)
+        thisDay.stats.statistics = statistics(thisDay.data)
         dailyStats.append(thisDay)
 
 def slice_hours(hours, hourlyStats, trace):
@@ -824,8 +822,7 @@ def slice_hours(hours, hourlyStats, trace):
                 raise TimeseriesFactoryException(
                         '1 Hour should have 60 minutes.')
 
-            # statistics(thisHour)
-            thisHour.stats.statistics = statistics(thisHour)
+            thisHour.stats.statistics = statistics(thisHour.data)
             hourlyStats.append(thisHour)
 
 def slice_months(months, monthlyStats, trace):
@@ -874,41 +871,34 @@ def slice_months(months, monthlyStats, trace):
         endtime = UTC.UTCDateTime(str(endtime))
         thisMonth = trace.slice(starttime, endtime)
 
-        # statistics(thisMonth)
-        thisMonth.stats.statistics = statistics(thisMonth)
+        thisMonth.stats.statistics = statistics(thisMonth.data)
         monthlyStats.append(thisMonth)
 
-def statistics(trace):
-    # TODO return the statistics object, attach it to the trace outside.
+def statistics(data):
     """
         Calculate average, standard deviation, minimum and maximum on given
         trace, add them to a 'statistics' object and attach them to the trace.
 
         Parameters
         ----------
-        trace :
-            a time series of data
+        trace : <numpy.ndarray>
+            an array of time-series data
 
         Returns
         -------
             object with key/value pairs for statistics
     """
-    H = trace.data
-    # TODO pull this outside, pass in an array to this method.
-
-    mean = np.nanmean(H)
-    # Skip some calculations if this entire trace is NaN's.
+    mean = np.nanmean(data)
+    # Skip some calculations if this entire array is NaN's.
     if not (np.isnan(mean)):
         # Ignoring any NaN's for these calculations.
-        # trace.stats.statistics = {
         statistics = {
             'average': mean,
-            'maximum': np.nanmax(H),
-            'minimum': np.nanmin(H),
-            'standarddeviation': np.nanstd(H)
+            'maximum': np.nanmax(data),
+            'minimum': np.nanmin(data),
+            'standarddeviation': np.nanstd(data)
         }
     else:
-        # trace.stats.statistics = {
         statistics = {
             'average': np.nan,
             'maximum': np.nan,
