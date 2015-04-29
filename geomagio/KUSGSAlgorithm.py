@@ -4,7 +4,7 @@
 
 import numpy as np
 import obspy.core
-import obspy.core.utcdatetime as UTC
+from obspy.core.utcdatetime import UTCDateTime
 import matplotlib
 import matplotlib.pyplot as plot
 from matplotlib.dates import DateFormatter, WeekdayLocator, DayLocator, MONDAY
@@ -19,8 +19,6 @@ ONEDAY = 24 * ONEHOUR
 
 MINUTESPERHOUR = 60
 MINUTESPERDAY = 24 * MINUTESPERHOUR
-# MINUTESPERDAY = 1440                # 24h * 60min
-# ONEHOUR = np.timedelta64(1, 'h')
 
 class KUSGSAlgorithm(Algorithm):
     """
@@ -411,7 +409,8 @@ def get_days(starttime, endtime):
         if lastday == (day.year, day.month, day.day):
             break
         # move to next day
-        day = obspy.core.UTCDateTime(day.timestamp + 86400)
+        # day = obspy.core.UTCDateTime(day.timestamp + 86400)
+        day = UTCDateTime(day.timestamp + 86400)
 
     return days
 
@@ -498,12 +497,12 @@ def get_month_boundaries(month):
         month = 1
         year += 1
 
-    beginNextMonth = UTC.UTCDateTime(year, month, 1)
+    beginNextMonth = UTCDateTime(year, month, 1)
     endOfMonth = np.datetime64(beginNextMonth, timezone='UTC') - ONEMINUTE
     endtime = np.datetime_as_string(endOfMonth, timezone='UTC')
 
-    starttime = UTC.UTCDateTime(str(starttime))
-    endtime = UTC.UTCDateTime(str(endtime))
+    starttime = UTCDateTime(str(starttime))
+    endtime = UTCDateTime(str(endtime))
     return { 'starttime': starttime, 'endtime': endtime }
 
 def get_months(days):
@@ -526,7 +525,7 @@ def get_months(days):
     for day in days:
         if day.month != month:
             date = np.datetime64(day)
-            date = UTC.UTCDateTime(str(date))
+            date = UTCDateTime(str(date))
             months.append(date)
             month = day.month
 
@@ -872,7 +871,7 @@ def get_traces(trace, interval='hours'):
             if month > 12:
                 month = 1
                 year += 1
-            date = UTC.UTCDateTime(year, month, 1)
+            date = UTCDateTime(year, month, 1)
         end = date - ONEMINUTE
 
         trace = trace.slice(start, end)
