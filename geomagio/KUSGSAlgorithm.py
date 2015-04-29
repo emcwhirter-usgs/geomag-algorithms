@@ -3,15 +3,15 @@
 """
 
 import numpy as np
-import obspy.core
-from obspy.core.utcdatetime import UTCDateTime
+# import obspy.core
+from obspy.core import Trace, Stats, Stream, UTCDateTime
 import matplotlib
 import matplotlib.pyplot as plot
 from matplotlib.dates import DateFormatter, WeekdayLocator, DayLocator, MONDAY
 from Algorithm import Algorithm
 from geomagio import TimeseriesFactoryException
 import copy
-import pandas as pd
+# import pandas as pd
 
 ONEMINUTE = 60
 ONEHOUR = 60 * ONEMINUTE
@@ -88,43 +88,61 @@ def clean_MHVs(timeseries):
     endtime = trace.stats.endtime
 
     # type = <type 'list'>
-    days = get_days(starttime, endtime)
+    # hours = get_hours(starttime, endtime)
+    # days = get_days(starttime, endtime)
+    # months = get_months(days)
 
-    months = get_months(days)
+    hours = []
+    rawHours = []
+    days = []
+    rangeLimit = 1.0
+    months = get_traces(trace, 'months')
+    print len(months), "months"
+    print Stream(months)
+    for month in months:
+        print month.stats.starttime
+        stdD = month.stats.statistics['standarddeviation']
+        maxRange = stdD * rangeLimit
 
-    # TODO: Slice month should take in a trace and return a array of traces (stream?)
-    #   with 1 trace for each month. Do the same for slice_days.
-    # monthTraces = slice_months(months, trace)
-    monthTraces = get_traces(trace, 'months')
-    monthBefore = copy.deepcopy(monthTraces)
+        monthDays = get_traces(month, 'days')
+        print len(monthDays), "days in month"
+        print Stream(monthDays)
+        for day in monthDays:
+            print day.stats.starttime
+            dayHours = get_traces(day, 'hours')
+            print len(dayHours), "hours in day"
+            for dayHour in dayHours:
+                print dayHour.stats.starttime
+                hour = clean_range(dayHour, maxRange)
+                # clean again, later
+                hours.append(hour)
+                rawHours.append(dayHour)
+            days.append(day)
 
-    dayTraces = get_traces(trace, 'days')
-    dayBefore = copy.deepcopy(dayTraces)
+    plot_hours(rawHours, hours, 'Before cleaning', 'After cleaning')
+    # monthBefore = copy.deepcopy(months)
 
-    # hours = []
-    # for day in days:
-    #     hours.append(get_hours(day))
-    hours = get_hours(starttime, endtime)
+    # days = get_traces(trace, 'days')
+    # dayBefore = copy.deepcopy(days)
 
+    # hours = get_traces(trace, 'hours')
+    # hourBefore = copy.deepcopy(hours)
 
-    hourTraces = get_traces(trace, 'hours')
+    # cleanedHours = clean_range(hours, months)
 
-    hourBefore = copy.deepcopy(hourTraces)
-    clean_range(hourBefore, hourTraces, monthTraces)
+    # hourBefore = copy.deepcopy(hours)
+    # clean_distribution(hourBefore, hours, months)
 
-    hourBefore = copy.deepcopy(hourTraces)
-    clean_distribution(hourBefore, hourTraces, monthTraces)
-
-    # plot_days(dayBefore, dayTraces, 'Input data', 'After')
-    # print_days(dayTraces, 'wide')
+    # plot_days(dayBefore, days, 'Input data', 'After')
+    # print_days(days, 'wide')
 
     # timeseries.plot() # This doesn't show anything
     # trace.plot()      # This also shows nothing...
-    # print_months(monthTraces)
-    # plot_months(monthBefore, monthTraces)
+    # print_months(months)
+    # plot_months(monthBefore, months)
 
     # print_all(trace.stats)
-    plot_all(monthBefore, monthTraces, dayBefore, dayTraces, hourBefore, hourTraces)
+    # plot_all(monthBefore, months, dayBefore, days, hourBefore, hours)
 
 def clean_distribution(hourBefore, hours, months, exclude=1.0):
     """
@@ -178,70 +196,73 @@ def clean_distribution(hourBefore, hours, months, exclude=1.0):
         'After removing MHVs at tails of distribution, entire data range')
     # print_hours(hours, 'wide')
 
-def clean_range(hourBefore, hours, months, rangeLimit=1.0):
-    """
-        Replace any hours within each month that have a range of minutes that
+def clean_range(hour, maxRange):
+    """Replace any hours within each month that have a range of minutes that
         is too extreme with NaN. Too extreme is defined by standard deviations
         of all minutes minutes within a month. Also eliminates any hours that
         have less than 30 minutes of valid (non-NaN) data.
 
-        Parameters
-        ----------
-        hourBefore : List <obspy.core.trac.Trace>
-            List of hourly statistics before eliminating points
+    Parameters
+    ----------
         hours : List <obspy.core.trac.Trace>
             List of hourly traces statistics
-        months : List <obspy.core.trac.Trace>
-            List of monthly statistics
-        rangeLimit : Float
+        maxRange : Float
             Number of standard deviations (from the monthly statistics) to
             use as the acceptable range of minutes within each hour in the
             month. Default is 1 Standard Deviation.
     """
-    print "#####  Cleaning MHVs  #####"
+    # print "#####  Cleaning MHVs  #####"
     # TODO: simplify this method by not passing in hourBefore, leave the
     # hours alone return the array.
     # TODO: Arrays should be hours instead of hourlyStat, months instead of
     #      months, days instead of dailyStats
     # TODO: "Here is an array of traces and an acceptable range, clear average
     #      for any traces that fall outside of this range"
-    nanMhvCount = 0
-    for hour in hours:
-        maximum = hour.stats.statistics['maximum']
-        minimum = hour.stats.statistics['minimum']
-        hourRange = maximum - minimum
+    # nanMhvCount = 0
+    trace = []
 
-        hourMonth = hour.stats.starttime.month
-        for monthStat in months:
-            if monthStat.stats.starttime.month == hourMonth:
-                stdD = monthStat.stats.statistics['standarddeviation']
-                allowedRange = stdD * rangeLimit
+    clearAvg = False
 
-        if np.isnan(hour.stats.statistics['average']):
-            nanMhvCount += 1
+    # stdD = month.stats.statistics['standarddeviation']
+    # allowedRange = stdD * rangeLimit
 
-        elif hourRange > allowedRange:
-            hour.stats.statistics['average'] = np.nan
-            nanMhvCount += 1
+    maximum = hour.stats.statistics['maximum']
+    minimum = hour.stats.statistics['minimum']
+    hourRange = maximum - minimum
 
-        else:
-            nanMinuteCount = 0
-            for minute in hour:
-                # Keep track of minutes that are NaN for eliminating hours.
-                if np.isnan(minute):
-                    nanMinuteCount += 1
+    # if np.isnan(hour.stats.statistics['average']):
+    #     nanMhvCount += 1
 
-            # If half of the minute values are bad, the entire hour is bad.
-            if nanMinuteCount >= 30:
-                hour.stats.statistics['average'] = np.nan
-                nanMhvCount += 1
+    if hourRange > maxRange:
+        clearAvg = True
+        # hour.stats.statistics['average'] = np.nan
+        # nanMhvCount += 1
 
-    print str(nanMhvCount) + " Total NaN MHVs found."
+    else:
+        nanMinuteCount = len(hour.data[hour.data == np.nan])
+        # for minute in hour:
+        #     # Keep track of minutes that are NaN for eliminating hours.
+        #     if np.isnan(minute):
+        #         nanMinuteCount += 1
 
-    print "#####  MHVs Cleaned  #####\n"
+        # If half of the minute values are bad, the entire hour is bad.
+        if nanMinuteCount >= 30:
+            clearAvg = True
+            # hour.stats.statistics['average'] = np.nan
+            # nanMhvCount += 1
+
+    if clearAvg:
+        stats = Stats(hour.stats)
+        stats.statistics['average'] = np.nan
+        return Trace(hour.data, stats)
+
+    return hour
+    # print str(nanMhvCount) + " Total NaN MHVs found."
+
+    # print "#####  MHVs Cleaned  #####\n"
     # Uncomment to see hour data printed and/or plotted for evalutating.
-    plot_hours(hourBefore, hours, 'Raw input data',
-        'After removing large minute ranges')
+    # plot_hours(hourBefore, hours, 'Raw input data',
+    #     'After removing large minute ranges')
     # print_hours(hours, 'wide')
 
 def clean_hours_other(hours, months, rangeLimit=2.0):
@@ -474,36 +495,36 @@ def get_hours(starttime, endtime):
 
 #     return hours
 
-def get_day_boundaries(date):
-    end = date + ONEDAY - ONEMINUTE
+# def get_day_boundaries(date):
+#     end = date + ONEDAY - ONEMINUTE
 
-    return { 'starttime': date, 'endtime': end }
+#     return { 'starttime': date, 'endtime': end }
 
-def get_hour_boundaries(date):
-    end = date + ONEHOUR - ONEMINUTE
+# def get_hour_boundaries(date):
+#     end = date + ONEHOUR - ONEMINUTE
 
-    return { 'starttime': date, 'endtime': end }
+#     return { 'starttime': date, 'endtime': end }
 
-def get_month_boundaries(month):
-    # Numpy doesn't know how to add a month...so work-around.
-    date = np.datetime64(month, timezone='UTC')
-    starttime = np.datetime_as_string(date, timezone='UTC')
+# def get_month_boundaries(month):
+#     # Numpy doesn't know how to add a month...so work-around.
+#     date = np.datetime64(month, timezone='UTC')
+#     starttime = np.datetime_as_string(date, timezone='UTC')
 
-    date = pd.DatetimeIndex([date])
-    month = date.month + 1
-    year = date.year
+#     date = pd.DatetimeIndex([date])
+#     month = date.month + 1
+#     year = date.year
 
-    if month > 12:
-        month = 1
-        year += 1
+#     if month > 12:
+#         month = 1
+#         year += 1
 
-    beginNextMonth = UTCDateTime(year, month, 1)
-    endOfMonth = np.datetime64(beginNextMonth, timezone='UTC') - ONEMINUTE
-    endtime = np.datetime_as_string(endOfMonth, timezone='UTC')
+#     beginNextMonth = UTCDateTime(year, month, 1)
+#     endOfMonth = np.datetime64(beginNextMonth, timezone='UTC') - ONEMINUTE
+#     endtime = np.datetime_as_string(endOfMonth, timezone='UTC')
 
-    starttime = UTCDateTime(str(starttime))
-    endtime = UTCDateTime(str(endtime))
-    return { 'starttime': starttime, 'endtime': endtime }
+#     starttime = UTCDateTime(str(starttime))
+#     endtime = UTCDateTime(str(endtime))
+#     return { 'starttime': starttime, 'endtime': endtime }
 
 def get_months(days):
     """
@@ -836,27 +857,26 @@ def print_months(monthlyStats):
         print "  Monthly Range  : " + str(statistics['maximum'] \
             - statistics['minimum']) + "\n"
 
-# def slice_trace(trace, interval='hours'):
 def get_traces(trace, interval='hours'):
-    # TODO: combine into 1 slice object, move complexity to "get" methods, if needed.
     """Use array of times to slice up trace and collect statistics.
 
-        Parameters
-        ----------
+    Parameters
+    ----------
         trace :
             a time-series trace of data
         interval: String
             Interval to use for trace boundaries.
             Trace should include complete intervals.
             'hours', 'days', 'months' are accepted
-        Returns
-        -------
-            array-like list of traces with statistics
+    Returns
+    -------
+        array-like list of traces with statistics
     """
     traces = []
 
     starttime = trace.stats.starttime
     endtime = trace.stats.endtime
+
     date = starttime
 
     while date < endtime:
@@ -874,9 +894,10 @@ def get_traces(trace, interval='hours'):
             date = UTCDateTime(year, month, 1)
         end = date - ONEMINUTE
 
-        trace = trace.slice(start, end)
-        trace.stats.statistics = statistics(trace.data)
-        traces.append(trace)
+        localTrace = trace.slice(start, end)
+        localTrace.stats.statistics = statistics(localTrace.data)
+
+        traces.append(localTrace)
 
     return traces
     # traces = []
