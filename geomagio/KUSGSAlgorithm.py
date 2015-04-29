@@ -3,7 +3,6 @@
 """
 
 import numpy as np
-# import obspy.core
 from obspy.core import Trace, Stats, Stream, UTCDateTime
 import matplotlib
 import matplotlib.pyplot as plot
@@ -11,7 +10,6 @@ from matplotlib.dates import DateFormatter, WeekdayLocator, DayLocator, MONDAY
 from Algorithm import Algorithm
 from geomagio import TimeseriesFactoryException
 import copy
-# import pandas as pd
 
 ONEMINUTE = 60
 ONEHOUR = 60 * ONEMINUTE
@@ -87,11 +85,6 @@ def clean_MHVs(timeseries):
     starttime = trace.stats.starttime
     endtime = trace.stats.endtime
 
-    # type = <type 'list'>
-    # hours = get_hours(starttime, endtime)
-    # days = get_days(starttime, endtime)
-    # months = get_months(days)
-
     hours = []
     rawHours = []
     days = []
@@ -132,6 +125,11 @@ def clean_MHVs(timeseries):
 
     # hourBefore = copy.deepcopy(hours)
     # clean_distribution(hourBefore, hours, months)
+
+    # Uncomment to see hour data printed and/or plotted for evalutating.
+    # plot_hours(hourBefore, hours, 'Raw input data',
+    #     'After removing large minute ranges')
+    # print_hours(hours, 'wide')
 
     # plot_days(dayBefore, days, 'Input data', 'After')
     # print_days(days, 'wide')
@@ -211,45 +209,23 @@ def clean_range(hour, maxRange):
             use as the acceptable range of minutes within each hour in the
             month. Default is 1 Standard Deviation.
     """
-    # print "#####  Cleaning MHVs  #####"
-    # TODO: simplify this method by not passing in hourBefore, leave the
-    # hours alone return the array.
-    # TODO: Arrays should be hours instead of hourlyStat, months instead of
-    #      months, days instead of dailyStats
-    # TODO: "Here is an array of traces and an acceptable range, clear average
-    #      for any traces that fall outside of this range"
-    # nanMhvCount = 0
     trace = []
 
     clearAvg = False
-
-    # stdD = month.stats.statistics['standarddeviation']
-    # allowedRange = stdD * rangeLimit
 
     maximum = hour.stats.statistics['maximum']
     minimum = hour.stats.statistics['minimum']
     hourRange = maximum - minimum
 
-    # if np.isnan(hour.stats.statistics['average']):
-    #     nanMhvCount += 1
-
     if hourRange > maxRange:
         clearAvg = True
-        # hour.stats.statistics['average'] = np.nan
-        # nanMhvCount += 1
 
     else:
         nanMinuteCount = len(hour.data[hour.data == np.nan])
-        # for minute in hour:
-        #     # Keep track of minutes that are NaN for eliminating hours.
-        #     if np.isnan(minute):
-        #         nanMinuteCount += 1
 
         # If half of the minute values are bad, the entire hour is bad.
         if nanMinuteCount >= 30:
             clearAvg = True
-            # hour.stats.statistics['average'] = np.nan
-            # nanMhvCount += 1
 
     if clearAvg:
         stats = Stats(hour.stats)
@@ -257,84 +233,6 @@ def clean_range(hour, maxRange):
         return Trace(hour.data, stats)
 
     return hour
-    # print str(nanMhvCount) + " Total NaN MHVs found."
-
-    # print "#####  MHVs Cleaned  #####\n"
-    # Uncomment to see hour data printed and/or plotted for evalutating.
-    # plot_hours(hourBefore, hours, 'Raw input data',
-    #     'After removing large minute ranges')
-    # print_hours(hours, 'wide')
-
-def clean_hours_other(hours, months, rangeLimit=2.0):
-    """
-        rangeLimit as number of standard devations from the monthly mean.
-            Default is 2 standard deviations on top and bottom of the monthly
-            average. Decimal values are allowed.
-    """
-    print "#####  Cleaning MHVs  #####"
-
-    nanMhvCount = 0
-    month = 0        # Numerical month value so we can see when it changes.
-    monthCount = -1  # Reference the same month until we're done with it.
-    monthCounts = [] # List of months ('month') with counts of NaN's.
-    for hour in hours:
-        maximum = hour.stats.statistics['maximum']
-        minimum = hour.stats.statistics['minimum']
-        hourRange = maximum - minimum
-
-        hourMonth = hour.stats.starttime.month
-        for monthStat in months:
-            if monthStat.stats.starttime.month == hourMonth:
-                stdD = monthStat.stats.statistics['standarddeviation']
-                allowedRange = 2 * stdD * rangeLimit
-
-        if np.isnan(hour.stats.statistics['average']):
-            nanMhvCount += 1
-
-            if hourMonth != month:
-                month = hourMonth
-                monthCount += 1
-                monthCounts.append([month, 1])
-            else:
-                monthCounts[monthCount][1] += 1
-
-        elif hourRange > allowedRange:
-            hour.stats.statistics['average'] = np.nan
-            nanMhvCount += 1
-
-            if hourMonth != month:
-                month = hourMonth
-                monthCount += 1
-                monthCounts.append([month, 1])
-            else:
-                monthCounts[monthCount][1] += 1
-
-        else:
-            nanMinuteCount = 0
-            for minute in hour:
-                # Keep track of minutes that are NaN for eliminating hours.
-                if np.isnan(minute):
-                    nanMinuteCount += 1
-
-            # If half of the minute values are bad, the entire hour is bad.
-            if nanMinuteCount >= 30:
-                hour.stats.statistics['average'] = np.nan
-                nanMhvCount += 1
-
-                if hour.stats.starttime.month != month:
-                    month = hour.stats.starttime.month
-                    monthCount += 1
-                    monthCounts.append([month, 1])
-                else:
-                    monthCounts[monthCount][1] += 1
-
-    print str(nanMhvCount) + " Total NaN MHVs found."
-    for mhv in monthCounts:
-        print "  " + str(mhv[1]) + " NaN MHVs in month: " + str(mhv[0])
-        if mhv[1] >= 30:
-            print "A MHV needs to be replaced in month " + str(mhv[0])
-
-    print "#####  MHVs Cleaned  #####\n"
 
 def dist_plot(fig, hours, months, sets=1, offset=0):
     means = []
@@ -396,161 +294,6 @@ def dist_subplot(fig, months, monthCount, title, times, means, sets, offset):
     lower = mean - 2.0*stddev
     upper = mean + 2.0*stddev
     plot.fill_between(times, lower, upper, facecolor='yellow', alpha=0.1)
-
-def get_days(starttime, endtime):
-    """Get days between (inclusive) starttime and endtime.
-
-    Parameters
-    ----------
-        starttime : obspy.core.UTCDateTime
-            The start time
-        endtime : obspy.core.UTCDateTime
-            The end time
-
-    Returns
-    -------
-        array_like
-            List of times, one per day, for all days between and including
-            ``starttime`` and ``endtime``.
-
-    Raises
-    ------
-        TimeseriesFactoryException
-            If starttime is after endtime
-    """
-    if starttime > endtime:
-        raise TimeseriesFactoryException('starttime must be before endtime')
-
-    days = []
-    day = starttime
-    lastday = (endtime.year, endtime.month, endtime.day)
-
-    while True:
-        days.append(day)
-        if lastday == (day.year, day.month, day.day):
-            break
-        # move to next day
-        # day = obspy.core.UTCDateTime(day.timestamp + 86400)
-        day = UTCDateTime(day.timestamp + 86400)
-
-    return days
-
-def get_hours(starttime, endtime):
-    """Get all of the hours between starttime and endtime.
-
-    Parameters
-    ----------
-        starttime : obspy.core.utcdatetime.UTCDateTime
-        endtime : obspy.core.utcdatetime.UTCDateTime
-
-    Returns
-    -------
-        array_like
-        List of times, one per hour, for all hours between and including
-        ``starttime`` and ``endtime``.
-
-    Raises
-    ------
-        TimeseriesFactoryException
-            If starttime is after endtime
-    """
-    if starttime > endtime:
-        raise AlgorithmException('The starttime must be before endtime.')
-
-    hours = []
-    date = starttime
-
-    while date < endtime:
-        hours.append(date)
-        date += ONEHOUR
-
-    hours.append(date)
-
-    return hours
-
-# def get_hours(day):
-#     """
-#         Get all of the hours in the given day.
-
-#         Parameters
-#         ----------
-#         day : obspy.core.utcdatetime.UTCDateTime
-
-#         Returns
-#         -------
-#         array_like
-#             List of times, one per month, for all days between and including
-#             ``starttime`` and ``endtime``.
-#     """
-#     hours = []
-#     # date = np.datetime64(day)
-#     date = day
-
-#     for i in range(0, 24):
-#         # hour = date + i * ONEHOUR
-#         date = date + ONEHOUR
-#         # hour = UTC.UTCDateTime(str(hour))
-
-#         hours.append(date)
-
-#     return hours
-
-# def get_day_boundaries(date):
-#     end = date + ONEDAY - ONEMINUTE
-
-#     return { 'starttime': date, 'endtime': end }
-
-# def get_hour_boundaries(date):
-#     end = date + ONEHOUR - ONEMINUTE
-
-#     return { 'starttime': date, 'endtime': end }
-
-# def get_month_boundaries(month):
-#     # Numpy doesn't know how to add a month...so work-around.
-#     date = np.datetime64(month, timezone='UTC')
-#     starttime = np.datetime_as_string(date, timezone='UTC')
-
-#     date = pd.DatetimeIndex([date])
-#     month = date.month + 1
-#     year = date.year
-
-#     if month > 12:
-#         month = 1
-#         year += 1
-
-#     beginNextMonth = UTCDateTime(year, month, 1)
-#     endOfMonth = np.datetime64(beginNextMonth, timezone='UTC') - ONEMINUTE
-#     endtime = np.datetime_as_string(endOfMonth, timezone='UTC')
-
-#     starttime = UTCDateTime(str(starttime))
-#     endtime = UTCDateTime(str(endtime))
-#     return { 'starttime': starttime, 'endtime': endtime }
-
-def get_months(days):
-    """
-        Get months between (inclusive) starttime and endtime.
-
-        Parameters
-        ----------
-        days : List of obspy.core.utcdatetime.UTCDateTime
-
-        Returns
-        -------
-        array_like
-            List of times, one per month, for all days between and including
-            ``starttime`` and ``endtime``.
-    """
-    months = []
-
-    month = 0
-    for day in days:
-        if day.month != month:
-            date = np.datetime64(day)
-            date = UTCDateTime(str(date))
-            months.append(date)
-            month = day.month
-
-    return months
 
 def kSubplot(fig, num, title, timeList, rLabel, mLabel, color='b', marker='s'):
     """
@@ -899,78 +642,6 @@ def get_traces(trace, interval='hours'):
 
         traces.append(localTrace)
 
-    return traces
-    # traces = []
-
-    # if interval == 'hours':
-    #     return slice_hours(get_hours(trace.starttime, trace.endtime), trace)
-
-    # for time in times:
-    #     if interval == 'hours':
-    #         boundaries = get_hour_boundaries(time)
-    #     elif interval == 'days':
-    #         boundaries = get_day_boundaries(time)
-    #     elif interval == 'months':
-    #         boundaries = get_month_boundaries(time)
-
-    #     starttime = boundaries['starttime']
-    #     endtime = boundaries['endtime']
-
-    #     thisTrace = trace.slice(starttime, endtime)
-
-    #     if (interval == 'days') and (thisTrace.stats.npts != MINUTESPERDAY):
-    #         raise TimeseriesFactoryException(
-    #                     'Entire calendar days of minute data required for K.')
-
-    #     thisTrace.stats.statistics = statistics(thisTrace.data)
-    #     traces.append(thisTrace)
-
-    # return traces
-
-def slice_hours(hours, trace):
-    """
-        Use array of "hours" to slice up "trace" and collect hourly statistics
-        to be attached to dailyStats.
-
-        Parameters
-        ----------
-        hours :
-            array of days UTC
-        trace :
-            a time-series trace of data
-
-        Returns
-        -------
-            array-like list of hourly traces with statistics
-    """
-    # hourTraces = []
-    # for day in hours:
-    #     for hour in day:
-    #         end = np.datetime64(hour) + ONEHOUR - ONEMINUTE
-    #         # TODO Look into using the raw time value instead of a string
-    #         end = UTC.UTCDateTime(str(end))
-
-    #         thisHour = trace.slice(hour, end)
-    #         if thisHour.stats.npts != MINUTESPERHOUR:
-    #             raise TimeseriesFactoryException(
-    #                     '1 Hour should have 60 minutes.')
-
-    #         thisHour.stats.statistics = statistics(thisHour.data)
-    #         hourTraces.append(thisHour)
-    # return hourTraces
-    traces = []
-    for hour in hours:
-        end = hour + ONEHOUR - ONEMINUTE
-        # TODO Look into using the raw time value instead of a string
-        # end = UTC.UTCDateTime(str(end))
-
-        trace = trace.slice(hour, end)
-        if trace.stats.npts != MINUTESPERHOUR:
-            raise TimeseriesFactoryException(
-                    '1 Hour should have 60 minutes.')
-
-        trace.stats.statistics = statistics(trace.data)
-        traces.append(trace)
     return traces
 
 def statistics(data):
