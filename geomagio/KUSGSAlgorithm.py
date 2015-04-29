@@ -13,11 +13,14 @@ from geomagio import TimeseriesFactoryException
 import copy
 import pandas as pd
 
+ONEMINUTE = 60
+ONEHOUR = 60 * ONEMINUTE
+ONEDAY = 24 * ONEHOUR
+
 MINUTESPERHOUR = 60
-MINUTESPERDAY = 1440                # 24h * 60min
-ONEDAY = np.timedelta64(1, 'D')
-ONEMINUTE = np.timedelta64(1, 'm')
-ONEHOUR = np.timedelta64(1, 'h')
+MINUTESPERDAY = 24 * MINUTESPERHOUR
+# MINUTESPERDAY = 1440                # 24h * 60min
+# ONEHOUR = np.timedelta64(1, 'h')
 
 class KUSGSAlgorithm(Algorithm):
     """
@@ -94,17 +97,19 @@ def clean_MHVs(timeseries):
     # TODO: Slice month should take in a trace and return a array of traces (stream?)
     #   with 1 trace for each month. Do the same for slice_days.
     # monthTraces = slice_months(months, trace)
-    monthTraces = slice_trace(months, trace, 'months')
+    monthTraces = get_traces(trace, 'months')
     monthBefore = copy.deepcopy(monthTraces)
 
-    dayTraces = slice_trace(days, trace, 'days')
+    dayTraces = get_traces(trace, 'days')
     dayBefore = copy.deepcopy(dayTraces)
 
-    hours = []
-    for day in days:
-        hours.append(get_hours(day))
+    # hours = []
+    # for day in days:
+    #     hours.append(get_hours(day))
+    hours = get_hours(starttime, endtime)
 
-    hourTraces = slice_hours(hours, trace)
+
+    hourTraces = get_traces(trace, 'hours')
 
     hourBefore = copy.deepcopy(hourTraces)
     clean_range(hourBefore, hourTraces, monthTraces)
@@ -374,24 +379,23 @@ def dist_subplot(fig, months, monthCount, title, times, means, sets, offset):
     plot.fill_between(times, lower, upper, facecolor='yellow', alpha=0.1)
 
 def get_days(starttime, endtime):
-    """
-        Get days between (inclusive) starttime and endtime.
+    """Get days between (inclusive) starttime and endtime.
 
-        Parameters
-        ----------
+    Parameters
+    ----------
         starttime : obspy.core.UTCDateTime
             The start time
         endtime : obspy.core.UTCDateTime
             The end time
 
-        Returns
-        -------
+    Returns
+    -------
         array_like
             List of times, one per day, for all days between and including
             ``starttime`` and ``endtime``.
 
-        Raises
-        ------
+    Raises
+    ------
         TimeseriesFactoryException
             If starttime is after endtime
     """
@@ -411,37 +415,75 @@ def get_days(starttime, endtime):
 
     return days
 
-def get_hours(day):
-    """
-        Get all of the hours in the given day.
+def get_hours(starttime, endtime):
+    """Get all of the hours between starttime and endtime.
 
-        Parameters
-        ----------
-        day : obspy.core.utcdatetime.UTCDateTime
+    Parameters
+    ----------
+        starttime : obspy.core.utcdatetime.UTCDateTime
+        endtime : obspy.core.utcdatetime.UTCDateTime
 
-        Returns
-        -------
+    Returns
+    -------
         array_like
-            List of times, one per month, for all days between and including
-            ``starttime`` and ``endtime``.
+        List of times, one per hour, for all hours between and including
+        ``starttime`` and ``endtime``.
+
+    Raises
+    ------
+        TimeseriesFactoryException
+            If starttime is after endtime
     """
+    if starttime > endtime:
+        raise AlgorithmException('The starttime must be before endtime.')
+
     hours = []
-    date = np.datetime64(day)
+    date = starttime
 
-    for i in range(0, 24):
-        hour = date + i * ONEHOUR
-        hour = UTC.UTCDateTime(str(hour))
+    while date < endtime:
+        hours.append(date)
+        date += ONEHOUR
 
-        hours.append(hour)
+    hours.append(date)
 
     return hours
 
-def get_day_boundaries(day):
-    end = np.datetime64(day) + ONEDAY - ONEMINUTE
-    # TODO Look into using the raw time value instead of a string
-    end = UTC.UTCDateTime(str(end))
+# def get_hours(day):
+#     """
+#         Get all of the hours in the given day.
 
-    return { 'starttime': day, 'endtime': end }
+#         Parameters
+#         ----------
+#         day : obspy.core.utcdatetime.UTCDateTime
+
+#         Returns
+#         -------
+#         array_like
+#             List of times, one per month, for all days between and including
+#             ``starttime`` and ``endtime``.
+#     """
+#     hours = []
+#     # date = np.datetime64(day)
+#     date = day
+
+#     for i in range(0, 24):
+#         # hour = date + i * ONEHOUR
+#         date = date + ONEHOUR
+#         # hour = UTC.UTCDateTime(str(hour))
+
+#         hours.append(date)
+
+#     return hours
+
+def get_day_boundaries(date):
+    end = date + ONEDAY - ONEMINUTE
+
+    return { 'starttime': date, 'endtime': end }
+
+def get_hour_boundaries(date):
+    end = date + ONEHOUR - ONEMINUTE
+
+    return { 'starttime': date, 'endtime': end }
 
 def get_month_boundaries(month):
     # Numpy doesn't know how to add a month...so work-around.
@@ -795,45 +837,75 @@ def print_months(monthlyStats):
         print "  Monthly Range  : " + str(statistics['maximum'] \
             - statistics['minimum']) + "\n"
 
-def slice_trace(times, trace, interval='days'):
+# def slice_trace(trace, interval='hours'):
+def get_traces(trace, interval='hours'):
     # TODO: combine into 1 slice object, move complexity to "get" methods, if needed.
-    """
-        Use array of times to slice up trace and collect statistics.
+    """Use array of times to slice up trace and collect statistics.
 
         Parameters
         ----------
-        times :
-            array of times UTC
         trace :
             a time-series trace of data
         interval: String
-            Interval to use for trace boundaries
-            'hours', 'days', 'months' accepted
+            Interval to use for trace boundaries.
+            Trace should include complete intervals.
+            'hours', 'days', 'months' are accepted
         Returns
         -------
             array-like list of traces with statistics
     """
     traces = []
 
-    for time in times:
-        if interval == 'days':
-            boundaries = get_day_boundaries(time)
+    starttime = trace.stats.starttime
+    endtime = trace.stats.endtime
+    date = starttime
+
+    while date < endtime:
+        start = date
+        if interval == 'hours':
+            date = start + ONEHOUR
+        elif interval == 'days':
+            date = start + ONEDAY
         elif interval == 'months':
-            boundaries = get_month_boundaries(time)
+            year = date.year
+            month = date.month + 1
+            if month > 12:
+                month = 1
+                year += 1
+            date = UTC.UTCDateTime(year, month, 1)
+        end = date - ONEMINUTE
 
-        starttime = boundaries['starttime']
-        endtime = boundaries['endtime']
-
-        thisTrace = trace.slice(starttime, endtime)
-
-        if (interval == 'days') and (thisTrace.stats.npts != MINUTESPERDAY):
-            raise TimeseriesFactoryException(
-                        'Entire calendar days of minute data required for K.')
-
-        thisTrace.stats.statistics = statistics(thisTrace.data)
-        traces.append(thisTrace)
+        trace = trace.slice(start, end)
+        trace.stats.statistics = statistics(trace.data)
+        traces.append(trace)
 
     return traces
+    # traces = []
+
+    # if interval == 'hours':
+    #     return slice_hours(get_hours(trace.starttime, trace.endtime), trace)
+
+    # for time in times:
+    #     if interval == 'hours':
+    #         boundaries = get_hour_boundaries(time)
+    #     elif interval == 'days':
+    #         boundaries = get_day_boundaries(time)
+    #     elif interval == 'months':
+    #         boundaries = get_month_boundaries(time)
+
+    #     starttime = boundaries['starttime']
+    #     endtime = boundaries['endtime']
+
+    #     thisTrace = trace.slice(starttime, endtime)
+
+    #     if (interval == 'days') and (thisTrace.stats.npts != MINUTESPERDAY):
+    #         raise TimeseriesFactoryException(
+    #                     'Entire calendar days of minute data required for K.')
+
+    #     thisTrace.stats.statistics = statistics(thisTrace.data)
+    #     traces.append(thisTrace)
+
+    # return traces
 
 def slice_hours(hours, trace):
     """
@@ -851,21 +923,35 @@ def slice_hours(hours, trace):
         -------
             array-like list of hourly traces with statistics
     """
-    hourTraces = []
-    for day in hours:
-        for hour in day:
-            end = np.datetime64(hour) + ONEHOUR - ONEMINUTE
-            # TODO Look into using the raw time value instead of a string
-            end = UTC.UTCDateTime(str(end))
+    # hourTraces = []
+    # for day in hours:
+    #     for hour in day:
+    #         end = np.datetime64(hour) + ONEHOUR - ONEMINUTE
+    #         # TODO Look into using the raw time value instead of a string
+    #         end = UTC.UTCDateTime(str(end))
 
-            thisHour = trace.slice(hour, end)
-            if thisHour.stats.npts != MINUTESPERHOUR:
-                raise TimeseriesFactoryException(
-                        '1 Hour should have 60 minutes.')
+    #         thisHour = trace.slice(hour, end)
+    #         if thisHour.stats.npts != MINUTESPERHOUR:
+    #             raise TimeseriesFactoryException(
+    #                     '1 Hour should have 60 minutes.')
 
-            thisHour.stats.statistics = statistics(thisHour.data)
-            hourTraces.append(thisHour)
-    return hourTraces
+    #         thisHour.stats.statistics = statistics(thisHour.data)
+    #         hourTraces.append(thisHour)
+    # return hourTraces
+    traces = []
+    for hour in hours:
+        end = hour + ONEHOUR - ONEMINUTE
+        # TODO Look into using the raw time value instead of a string
+        # end = UTC.UTCDateTime(str(end))
+
+        trace = trace.slice(hour, end)
+        if trace.stats.npts != MINUTESPERHOUR:
+            raise TimeseriesFactoryException(
+                    '1 Hour should have 60 minutes.')
+
+        trace.stats.statistics = statistics(trace.data)
+        traces.append(trace)
+    return traces
 
 def statistics(data):
     """
