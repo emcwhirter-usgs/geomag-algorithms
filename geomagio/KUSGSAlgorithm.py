@@ -19,22 +19,20 @@ MINUTESPERHOUR = 60
 MINUTESPERDAY = 24 * MINUTESPERHOUR
 
 class KUSGSAlgorithm(Algorithm):
-    """
-        Algorithm for creating K-USGS indices.
+    """Algorithm for creating K-USGS indices.
 
-        Parameters
-        ----------
+    Parameters
+    ----------
     """
 
     def __init__(self):
         Algorithm.__init__(self, inchannels=['H'], outchannels=['H','H','H','H'])
 
     def check_stream(self, timeseries, channels):
-        """
-            Checks a stream to make certain all the required channels exist.
+        """Checks a stream to make certain all the required channels exist.
 
-            Parameters
-            ----------
+        Parameters
+        ----------
             timeseries: obspy.core.Stream
                 Stream to be checked.
             channels: array_like
@@ -47,11 +45,10 @@ class KUSGSAlgorithm(Algorithm):
         return True
 
     def process(self, timeseries):
-        """
-            Process the data to calculate K-USGS indices.
+        """Process the data to calculate K-USGS indices.
 
-            Parameters
-            ----------
+        Parameters
+        ----------
             out_stream: obspy.core.Stream
                 New stream object containing the converted coordinates.
         """
@@ -63,14 +60,13 @@ class KUSGSAlgorithm(Algorithm):
 
 
 def clean_MHVs(timeseries):
-    """
-        SR-Curve uses 24 Mean Hourly Values (MHVs) for 1 entire calendar
-        day, plus the last 2 MHVs from the previous day and the first 2
-        MHVs from the following day. Thus the data is cleaned in daily
-        chuncks using 28 MHVs. MHVs are excluded if they contain minute
-        values that have a large range, or they fall in the tails of the
-        monthly MHV distribution. MHVs that are excluded or don't exist
-        are replaced with a daily or monthly mean.
+    """SR-Curve uses 24 Mean Hourly Values (MHVs) for 1 entire calendar
+    day, plus the last 2 MHVs from the previous day and the first 2
+    MHVs from the following day. Thus the data is cleaned in daily
+    chuncks using 28 MHVs. MHVs are excluded if they contain minute
+    values that have a large range, or they fall in the tails of the
+    monthly MHV distribution. MHVs that are excluded or don't exist
+    are replaced with a daily or monthly mean.
     """
     # type = <class 'obspy.core.trace.Trace'>
     trace = timeseries.select(channel='H')[0]
@@ -88,126 +84,101 @@ def clean_MHVs(timeseries):
     hours = []
     rawHours = []
     days = []
-    rangeLimit = 1.0
+    rangeLimit = 1.0        # 1 standard deviation TODO pass this in to the algorithm
+    distributionLimit = 3.0 # 3 standard deviations TODO pass this in to the algorithm
+
     months = get_traces(trace, 'months')
-    print len(months), "months"
-    print Stream(months)
     for month in months:
-        print month.stats.starttime
+        avg = month.stats.statistics['average']
         stdD = month.stats.statistics['standarddeviation']
         maxRange = stdD * rangeLimit
+        minimum = avg - distributionLimit * stdD
+        maximum = avg + distributionLimit * stdD
 
         monthDays = get_traces(month, 'days')
-        print len(monthDays), "days in month"
-        print Stream(monthDays)
         for day in monthDays:
-            print day.stats.starttime
+
             dayHours = get_traces(day, 'hours')
-            print len(dayHours), "hours in day"
             for dayHour in dayHours:
-                print dayHour.stats.starttime
                 hour = clean_range(dayHour, maxRange)
-                # clean again, later
+                hour = clean_distribution(hour, minimum, maximum)
                 hours.append(hour)
                 rawHours.append(dayHour)
             days.append(day)
 
-    plot_hours(rawHours, hours, 'Before cleaning', 'After cleaning')
-    # monthBefore = copy.deepcopy(months)
+    # Uncomment any of the lines below to see data printed and/or plotted
+    #   for evalutation purposes.
+    plot_ranges(rawHours, hours, 'Before cleaning large minute ranges, all data',
+        'After cleaning, all data')
+    plot_distribution(rawHours, hours, months)
 
-    # days = get_traces(trace, 'days')
-    # dayBefore = copy.deepcopy(days)
-
-    # hours = get_traces(trace, 'hours')
-    # hourBefore = copy.deepcopy(hours)
-
-    # cleanedHours = clean_range(hours, months)
-
-    # hourBefore = copy.deepcopy(hours)
-    # clean_distribution(hourBefore, hours, months)
-
-    # Uncomment to see hour data printed and/or plotted for evalutating.
-    # plot_hours(hourBefore, hours, 'Raw input data',
-    #     'After removing large minute ranges')
     # print_hours(hours, 'wide')
+    # print_days(days, 'wide')
+    # print_months(months)
+    # print_all(trace.stats)
 
     # plot_days(dayBefore, days, 'Input data', 'After')
-    # print_days(days, 'wide')
 
     # timeseries.plot() # This doesn't show anything
     # trace.plot()      # This also shows nothing...
-    # print_months(months)
     # plot_months(monthBefore, months)
 
-    # print_all(trace.stats)
     # plot_all(monthBefore, months, dayBefore, days, hourBefore, hours)
 
-def clean_distribution(hourBefore, hours, months, exclude=1.0):
-    """
-        Elminiate any MHVs within a month window that fall in the tails of the
-        monthly distribution, which is defined as a number of standard
-        deviations away from the monthly mean.
-
-        Parameters
-        ----------
-        hourBefore : List <obspy.core.trac.Trace>
-            List of hourly statistics before eliminating points
-        hours : List <obspy.core.trac.Trace>
-            List of hourly traces with statistics
-        months : List <obspy.core.trac.Trace>
-            List of monthly traces statistics
-        exclude : Float
-            Number of standard deviations (from the monthly statistics) to
-            use as the acceptable range of MHVs within the month. Default is
-            3 Standard Deviations, which should eliminate ~0.3% of the data,
-            assuming a normal distribution, which I'm not sure is a valid
-            assumptions, but it's what the papers say about the algorithm.
-    """
-    print "cleaning distribution"
-
-    fig = plot.figure("Montly Statistics")
-
-    dist_plot(fig, hours, months, 2, 0)
-
-    prevMonth = -1
-    for hour in hours:
-        hourMonth = hour.stats.starttime.month
-        for month in months:
-            if (month == hourMonth):
-                stddev = month.stats.statistics['standarddeviation']
-                avg = month.stats.statistics['average']
-                maximum = avg + stddev * exclude
-                minimum = avg + stddev * exclude
-                if (hour.stats.statistics['average'] > maximum) or (hour.stats.statistics['average'] < minimum):
-                    print "Elminiate point"
-
-    dist_plot(fig, hours, months, 2, 1)
-
-    # plot.subplots_adjust(hspace=0.23, wspace=0.01)
-    mng = plot.get_current_fig_manager()
-    mng.window.showMaximized()
-    plot.show()
-
-    print "done cleaning distribution"
-    # Uncomment to see hour data printed and/or plotted for evalutating.
-    plot_hours(hourBefore, hours, 'Raw input data, entire data range',
-        'After removing MHVs at tails of distribution, entire data range')
-    # print_hours(hours, 'wide')
-
-def clean_range(hour, maxRange):
-    """Replace any hours within each month that have a range of minutes that
-        is too extreme with NaN. Too extreme is defined by standard deviations
-        of all minutes minutes within a month. Also eliminates any hours that
-        have less than 30 minutes of valid (non-NaN) data.
+def clean_distribution(hour, minimum, maximum):
+    """Elminiate any MHVs that are larger than maximum or smaller than minimum.
 
     Parameters
     ----------
-        hours : List <obspy.core.trac.Trace>
-            List of hourly traces statistics
+        hour : Trace <obspy.core.trac.Trace>
+            Hourly trace with statistics
+        minimum : Float
+        maximum : Float
+
+    Returns
+    -------
+
+    """
+    return hour
+# def clean_distribution(hourBefore, hours, months, exclude=1.0):
+#     """
+#         Elminiate any MHVs within a month window that fall in the tails of the
+#         monthly distribution, which is defined as a number of standard
+#         deviations away from the monthly mean.
+
+#         Parameters
+#         ----------
+#         hourBefore : List <obspy.core.trac.Trace>
+#             List of hourly statistics before eliminating points
+#         hours : List <obspy.core.trac.Trace>
+#             List of hourly traces with statistics
+#         months : List <obspy.core.trac.Trace>
+#             List of monthly traces statistics
+#         exclude : Float
+#             Number of standard deviations (from the monthly statistics) to
+#             use as the acceptable range of MHVs within the month. Default is
+#             3 Standard Deviations, which should eliminate ~0.3% of the data,
+#             assuming a normal distribution, which I'm not sure is a valid
+#             assumptions, but it's what the papers say about the algorithm.
+#     """
+
+def clean_range(hour, maxRange):
+    """Replace any hours within each month that have a range of minutes that
+    is larger than maxRange with NaN. Also, eliminates any hours that have less
+    than 30 minutes of valid (non-NaN) data.
+
+    Parameters
+    ----------
+        hour : Trace <obspy.core.trac.Trace>
+            Hourly trace with statistics
         maxRange : Float
             Number of standard deviations (from the monthly statistics) to
             use as the acceptable range of minutes within each hour in the
             month. Default is 1 Standard Deviation.
+
+    Returns
+    -------
+        Trace with updated statistics
     """
     trace = []
 
@@ -229,6 +200,7 @@ def clean_range(hour, maxRange):
 
     if clearAvg:
         stats = Stats(hour.stats)
+        stats.statistics = copy.deepcopy(stats.statistics)
         stats.statistics['average'] = np.nan
         return Trace(hour.data, stats)
 
@@ -296,11 +268,10 @@ def dist_subplot(fig, months, monthCount, title, times, means, sets, offset):
     plot.fill_between(times, lower, upper, facecolor='yellow', alpha=0.1)
 
 def kSubplot(fig, num, title, timeList, rLabel, mLabel, color='b', marker='s'):
-    """
-        Helper method for making subplots.
+    """Helper method for making subplots.
 
-        Parameters
-        ----------
+    Parameters
+    ----------
         fig : magplotlib.figure.Figure
             Instance of plot.figure to attach the subplot to
         num : Integer
@@ -358,11 +329,10 @@ def kSubplot(fig, num, title, timeList, rLabel, mLabel, color='b', marker='s'):
     plot.fill_between(times, lower, upper, facecolor='yellow', alpha=0.1)
 
 def plot_all(monBefore, monAfter, dayBefore, dayAfter, hourBefore, hourAfter):
-    """
-        Plot montly, daily, and hourly statistics before and after cleaning.
+    """Plot montly, daily, and hourly statistics before and after cleaning.
 
-        Parameters
-        ----------
+    Parameters
+    ----------
         monBefore : List <obspy.core.trac.Trace>
             List of monthly statistics before cleaning
         monAfter : List <obspy.core.trac.Trace>
@@ -411,11 +381,10 @@ def plot_all(monBefore, monAfter, dayBefore, dayAfter, hourBefore, hourAfter):
     plot.show()
 
 def plot_days(dayBefore, dayAfter, beforeTitle='', afterTitle=''):
-    """
-        Plot daily statistics before and after cleaning.
+    """Plot daily statistics before and after cleaning.
 
-        Parameters
-        ----------
+    Parameters
+    ----------
         dayBefore : List <obspy.core.trac.Trace>
             List of daily statistics before cleaning
         dayAfter : List <obspy.core.trac.Trace>
@@ -440,12 +409,46 @@ def plot_days(dayBefore, dayAfter, beforeTitle='', afterTitle=''):
     mng.window.showMaximized()
     plot.show()
 
-def plot_hours(hourBefore, hourAfter, beforeTitle='', afterTitle=''):
-    """
-        Plot hourly statistics before and after cleaning.
+def plot_distribution(rawHours, hours, months):
+    fig = plot.figure("Montly Statistics")
 
-        Parameters
-        ----------
+    dist_plot(fig, rawHours, months, 2, 0)
+
+    dist_plot(fig, hours, months, 2, 1)
+
+    # plot.subplots_adjust(hspace=0.23, wspace=0.01)
+    mng = plot.get_current_fig_manager()
+    mng.window.showMaximized()
+    plot.tight_layout()
+    plot.show()
+
+def plot_months(monBefore, monAfter):
+    """Plot monthly statistics before and after cleaning.
+
+    Parameters
+    ----------
+        monBefore : List <obspy.core.trac.Trace>
+            List of monthly statistics before cleaning
+        monAfter : List <obspy.core.trac.Trace>
+            List of monthly statistics after cleaning
+    """
+    fig = plot.figure('Average monthly nT Values')
+
+    monthTitle = 'Monthly means (nT)'
+    monthLabel = 'Daily mean range'
+
+    kSubplot(fig, 211, monthTitle, monBefore, monthLabel, 'Month', 'blue', 's')
+    kSubplot(fig, 212, monthTitle, monAfter, monthLabel, 'Month', 'green', 's')
+
+    mng = plot.get_current_fig_manager()
+    mng.window.showMaximized()
+    plot.show()
+
+def plot_ranges(hourBefore, hourAfter, beforeTitle='', afterTitle=''):
+    """Plot hourly statistics before and after cleaning.
+
+    Parameters
+    ----------
         hourBefore : List <obspy.core.trac.Trace>
             List of hourly statistics before cleaning
         hourAfter : List <obspy.core.trac.Trace>
@@ -470,35 +473,11 @@ def plot_hours(hourBefore, hourAfter, beforeTitle='', afterTitle=''):
     mng.window.showMaximized()
     plot.show()
 
-def plot_months(monBefore, monAfter):
-    """
-        Plot monthly statistics before and after cleaning.
-
-        Parameters
-        ----------
-        monBefore : List <obspy.core.trac.Trace>
-            List of monthly statistics before cleaning
-        monAfter : List <obspy.core.trac.Trace>
-            List of monthly statistics after cleaning
-    """
-    fig = plot.figure('Average monthly nT Values')
-
-    monthTitle = 'Monthly means (nT)'
-    monthLabel = 'Daily mean range'
-
-    kSubplot(fig, 211, monthTitle, monBefore, monthLabel, 'Month', 'blue', 's')
-    kSubplot(fig, 212, monthTitle, monAfter, monthLabel, 'Month', 'green', 's')
-
-    mng = plot.get_current_fig_manager()
-    mng.window.showMaximized()
-    plot.show()
-
 def print_all(stats):
-    """
-        Print statistics for the entire trace to the terminal.
+    """Print statistics for the entire trace to the terminal.
 
-        Parameters
-        ----------
+    Parameters
+    ----------
         stats : trace.stats
 
     """
@@ -514,16 +493,15 @@ def print_all(stats):
         + str(statistics['maximum'] - statistics['minimum']) + "nT"
 
 def print_days(days, format='wide'):
-    """
-        Print statistics for each day to terminal.
+    """Print statistics for each day to terminal.
         ### Example output ###
             Day          : 2013-12-31T00:00:00.000000Z
             Daily Average: 20894.2173562
             Daily Std Dev: 9.39171243572
             Daily Range  : 44.319
 
-        Parameters
-        ----------
+    Parameters
+    ----------
         days : List <obspy.core.trac.Trace>
             List of daily traces with statistics
         wide : String
@@ -546,16 +524,15 @@ def print_days(days, format='wide'):
                 - statistics['minimum']) + "\n"
 
 def print_hours(hours, format='wide'):
-    """
-        Print statistics for each hour to terminal.
+    """Print statistics for each hour to terminal.
         ### Example output ###
               Hour          : 2014-01-02T17:00:00.000000Z
               Hourly Average: 20855.7571167
               Hourly Std Dev: 10.1907743067
               Hourly Range  : 36.883
 
-        Parameters
-        ----------
+    Parameters
+    ----------
         hours : List <obspy.core.trac.Trace>
             List of hourly traces with statistics
         wide : String
@@ -578,16 +555,15 @@ def print_hours(hours, format='wide'):
                 - statistics['minimum']) + "\n"
 
 def print_months(monthlyStats):
-    """
-        Print statistics for each month to terminal.
+    """Print statistics for each month to terminal.
         ### Example output ###
           Month          : 2013-12-31T00:00:00.000000Z
           Monthly Average: 20894.2173562
           Monthly Std Dev: 9.39171243572
           Monthly Range  : 44.319
 
-        Parameters
-        ----------
+    Parameters
+    ----------
         monthlyStats : List <obspy.core.trac.Trace>
             List of monthly statistics
     """
@@ -645,18 +621,17 @@ def get_traces(trace, interval='hours'):
     return traces
 
 def statistics(data):
-    """
-        Calculate average, standard deviation, minimum and maximum on given
-        trace, add them to a 'statistics' object and attach them to the trace.
+    """Calculate average, standard deviation, minimum and maximum on given
+    trace, add them to a 'statistics'.
 
-        Parameters
-        ----------
+    Parameters
+    ----------
         data : <numpy.ndarray>
             an array of time-series data
 
-        Returns
-        -------
-            object with key/value pairs for statistics
+    Returns
+    -------
+        object with key/value pairs for statistics
     """
     mean = np.nanmean(data)
     # Skip some calculations if this entire array is NaN's.
