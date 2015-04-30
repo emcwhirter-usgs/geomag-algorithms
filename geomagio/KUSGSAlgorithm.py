@@ -140,27 +140,6 @@ def clean_distribution(hour, minimum, maximum):
 
     """
     return hour
-# def clean_distribution(hourBefore, hours, months, exclude=1.0):
-#     """
-#         Elminiate any MHVs within a month window that fall in the tails of the
-#         monthly distribution, which is defined as a number of standard
-#         deviations away from the monthly mean.
-
-#         Parameters
-#         ----------
-#         hourBefore : List <obspy.core.trac.Trace>
-#             List of hourly statistics before eliminating points
-#         hours : List <obspy.core.trac.Trace>
-#             List of hourly traces with statistics
-#         months : List <obspy.core.trac.Trace>
-#             List of monthly traces statistics
-#         exclude : Float
-#             Number of standard deviations (from the monthly statistics) to
-#             use as the acceptable range of MHVs within the month. Default is
-#             3 Standard Deviations, which should eliminate ~0.3% of the data,
-#             assuming a normal distribution, which I'm not sure is a valid
-#             assumptions, but it's what the papers say about the algorithm.
-#     """
 
 def clean_range(hour, maxRange):
     """Replace any hours within each month that have a range of minutes that
@@ -444,34 +423,131 @@ def plot_months(monBefore, monAfter):
     mng.window.showMaximized()
     plot.show()
 
-def plot_ranges(hourBefore, hourAfter, beforeTitle='', afterTitle=''):
+def plot_ranges(time1, time2, title1='', title2=''):
     """Plot hourly statistics before and after cleaning.
 
     Parameters
     ----------
-        hourBefore : List <obspy.core.trac.Trace>
+        time1 : List <obspy.core.trac.Trace>
             List of hourly statistics before cleaning
-        hourAfter : List <obspy.core.trac.Trace>
+        time2 : List <obspy.core.trac.Trace>
             List of hourly statistics after cleaning
-        beforeTitle: String
+        title1: String
             Title description to append to "before" plot title
-        afterTitle: String
+        title2: String
             Title description to append to "after" plot title
     """
     fig = plot.figure('MHVs (Mean Hourly nT Values)')
 
     hourTitle = ' - Hourly means (nT)'
-    hourLabel = 'Minute Range'
+    rLabel1 = 'Minute Range Before'
+    rLabel2 = 'Minute Range After'
 
-    beforeTitle = beforeTitle + hourTitle
-    afterTitle = afterTitle + hourTitle
+    title1 = title1 + hourTitle
+    title2 = title2 + hourTitle
 
-    kSubplot(fig, 211, beforeTitle, hourBefore, hourLabel, 'MHVs', 'blue', '+')
-    kSubplot(fig, 212, afterTitle, hourAfter, hourLabel, 'MHVs', 'green', '+')
+    label1 = 'MHVs Before'
+    label2 = 'MHVs After'
+
+    plot_ranges_helper(fig, title1, title2, time1, time2,
+                        rLabel1, rLabel2, label1, label2)
 
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
+    plot.tight_layout()
     plot.show()
+
+def plot_ranges_helper(fig, title1, title2, list1, list2,
+                        rLabel1, rLabel2, label1, label2):
+    """Helper method for making subplots.
+
+    Parameters
+    ----------
+        fig : magplotlib.figure.Figure
+            Instance of plot.figure to attach the subplot to
+        title1 : String
+            1st half of subplot title
+        title2 : String
+            2nd half of subplot title
+        list1 :
+            Array of times and stats to use for before plot
+        list2 :
+            Array of times and stats to use for after plot
+        rLabel1 : String
+            Range label for before values
+        rLabel2 : String
+            Range label for after values
+        label1 : String
+            Mean label for before data
+        label2 : String
+            Mean label for after data
+    """
+    means1 = []
+    means2 = []
+    times1 = []
+    times2 = []
+    ranges1 = []
+    ranges2 = []
+
+    subplot = fig.add_subplot(111)
+    subplot.set_title(title1 + " *VS* " + title2)
+    subplot.xaxis.set_major_formatter(DateFormatter('%B %d, %Y'))
+    subplot.xaxis.set_major_locator(DayLocator([5,15,25]))
+
+    for time in list1:
+        times1.append(time.stats.starttime)
+        means1.append(time.stats.statistics['average'])
+        ranges1.append(time.stats.statistics['maximum']
+                - time.stats.statistics['minimum'])
+    times1 = matplotlib.dates.date2num(times1)
+    for time in list2:
+        times2.append(time.stats.starttime)
+        means2.append(time.stats.statistics['average'])
+        ranges2.append(time.stats.statistics['maximum']
+                - time.stats.statistics['minimum'])
+    times2 = matplotlib.dates.date2num(times2)
+
+    ptsTotal = 0
+    for mean in means1:
+        if not np.isnan(mean):
+            ptsTotal += 1
+    ptsRemain = 0
+    for mean in means2:
+        if not np.isnan(mean):
+            ptsRemain += 1
+    legendTitle = str(ptsRemain) + " of " +  str(ptsTotal) + " pts remaining"
+
+    color1 = ['#ee95cf', '#e13636', 'red']
+    plot.errorbar(times1, means1, ranges1, color=color1[0], label=rLabel1)
+    mean1 = np.nanmean(means1)
+    start1 = times1[0]
+    end1 = times1[len(times1)-1]
+    plot.plot([start1, end1], [mean1, mean1], label='Mean Before',
+        color=color1[1], lw=2)
+    # plot.plot(times1, means1, color=color1[2], marker='+', label=label1)
+
+    color2 = ['#1523ea', '#000549', 'blue']
+    plot.errorbar(times2, means2, ranges2, color=color2[0], label=rLabel2)
+    mean2 = np.nanmean(means2)
+    start2 = times2[0]
+    end2 = times2[len(times2)-1]
+    plot.plot([start2, end2], [mean2, mean2], label='Mean After',
+        color=color2[1], lw=2)
+    # plot.plot(times2, means2, color=color2[3], marker='+', label=label2)
+
+
+    plot.legend(loc='best', numpoints=1, frameon=False, title=legendTitle)
+
+    stddev = np.nanmax(means1) - np.nanmin(means1)
+    lower = mean - 0.5*stddev
+    upper = mean + 0.5*stddev
+    plot.fill_between(times1, lower, upper, facecolor='red', alpha=0.04)
+    lower = mean - 1.0*stddev
+    upper = mean + 1.0*stddev
+    plot.fill_between(times1, lower, upper, facecolor='orange', alpha=0.06)
+    # lower = mean - 2.0*stddev
+    # upper = mean + 2.0*stddev
+    # plot.fill_between(times1, lower, upper, facecolor='yellow', alpha=0.08)
 
 def print_all(stats):
     """Print statistics for the entire trace to the terminal.
