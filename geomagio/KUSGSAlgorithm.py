@@ -108,14 +108,15 @@ def clean_MHVs(timeseries):
 
     # Uncomment any of the lines below to see data printed and/or plotted
     #   for evalutation purposes.
-    plot_ranges(rawHours, hours, 'Before cleaning large minute ranges, all data',
-        'After cleaning, all data')
-    plot_distribution(rawHours, hours, months)
+    # plot_ranges(rawHours, hours,
+    #     'Before cleaning large minute ranges, all data',
+    #     'After cleaning, all data')
+    # plot_distribution(rawHours, hours, months)
 
-    # print_hours(hours, 'wide')
-    # print_days(days, 'wide')
-    # print_months(months)
-    # print_all(trace.stats)
+    # print_times(hours, 'Hour', 'wide')
+    # print_times(days, 'Day', 'wide')
+    # print_times(months, 'Month', 'tall')
+    print_all(trace.stats)
 
     # plot_days(dayBefore, days, 'Input data', 'After')
 
@@ -245,6 +246,50 @@ def dist_subplot(fig, months, monthCount, title, times, means, sets, offset):
     lower = mean - 2.0*stddev
     upper = mean + 2.0*stddev
     plot.fill_between(times, lower, upper, facecolor='yellow', alpha=0.1)
+
+def get_traces(trace, interval='hours'):
+    """Use array of times to slice up trace and collect statistics.
+
+    Parameters
+    ----------
+        trace :
+            a time-series trace of data
+        interval: String
+            Interval to use for trace boundaries.
+            Trace should include complete intervals.
+            'hours', 'days', 'months' are accepted
+    Returns
+    -------
+        array-like list of traces with statistics
+    """
+    traces = []
+
+    starttime = trace.stats.starttime
+    endtime = trace.stats.endtime
+
+    date = starttime
+
+    while date < endtime:
+        start = date
+        if interval == 'hours':
+            date = start + ONEHOUR
+        elif interval == 'days':
+            date = start + ONEDAY
+        elif interval == 'months':
+            year = date.year
+            month = date.month + 1
+            if month > 12:
+                month = 1
+                year += 1
+            date = UTCDateTime(year, month, 1)
+        end = date - ONEMINUTE
+
+        localTrace = trace.slice(start, end)
+        localTrace.stats.statistics = statistics(localTrace.data)
+
+        traces.append(localTrace)
+
+    return traces
 
 def kSubplot(fig, num, title, timeList, rLabel, mLabel, color='b', marker='s'):
     """Helper method for making subplots.
@@ -568,133 +613,33 @@ def print_all(stats):
     print "Range of all Minutes  : " \
         + str(statistics['maximum'] - statistics['minimum']) + "nT"
 
-def print_days(days, format='wide'):
-    """Print statistics for each day to terminal.
-        ### Example output ###
-            Day          : 2013-12-31T00:00:00.000000Z
-            Daily Average: 20894.2173562
-            Daily Std Dev: 9.39171243572
-            Daily Range  : 44.319
+def print_times(times, interval, format='wide'):
+    """Print statistics for each time to terminal.
 
     Parameters
     ----------
-        days : List <obspy.core.trac.Trace>
-            List of daily traces with statistics
+        times : List <obspy.core.trac.Trace>
+            List of time traces with statistics
+        interval: String
+            Display interval, typically: 'Hour', 'Day', 'Month'
         wide : String
             If 'wide', print more horizontal, else print more vertical.
     """
-    for day in dailyStats:
-        stats = day.stats
+    for time in times:
+        stats = time.stats
         statistics = stats.statistics
         if format == 'wide':
-            print "  Day: " + str(stats.starttime) \
-                  + "\tDay Avg: " + str(statistics['average']) \
-                  + "\tDay Std Dev: " + str(statistics['standarddeviation']) \
-                  + "\tDay Range : " + str(statistics['maximum'] \
-                  - statistics['minimum'])
-        else:
-            print "    Day          : " + str(stats.starttime)
-            print "    Daily Average: " + str(statistics['average'])
-            print "    Daily Std Dev: " + str(statistics['standarddeviation'])
-            print "    Daily Range  : " + str(statistics['maximum'] \
-                - statistics['minimum']) + "\n"
-
-def print_hours(hours, format='wide'):
-    """Print statistics for each hour to terminal.
-        ### Example output ###
-              Hour          : 2014-01-02T17:00:00.000000Z
-              Hourly Average: 20855.7571167
-              Hourly Std Dev: 10.1907743067
-              Hourly Range  : 36.883
-
-    Parameters
-    ----------
-        hours : List <obspy.core.trac.Trace>
-            List of hourly traces with statistics
-        wide : String
-            If 'wide', print more horizontal, else print more vertical.
-    """
-    for hour in hours:
-        stats = hour.stats
-        statistics = stats.statistics
-        if format == 'wide':
-            print "   Hour: " + str(stats.starttime) \
-                + "\t Avg: " + str(statistics['average']) \
-                + "\t   Std Dev: " + str(statistics['standarddeviation']) \
-                + "\t Range: " + str(statistics['maximum'] \
+            print interval, ":", str(stats.starttime), \
+                "\t Avg : ", str(statistics['average']), \
+                "\t Std Dev: ", str(statistics['standarddeviation']), \
+                "\t Range : ", str(statistics['maximum'] \
                 - statistics['minimum'])
         else:
-            print "      Hour          : " + str(stats.starttime)
-            print "      Hourly Average: " + str(statistics['average'])
-            print "      Hourly Std Dev: " + str(statistics['standarddeviation'])
-            print "      Hourly Range  : " + str(statistics['maximum'] \
-                - statistics['minimum']) + "\n"
-
-def print_months(monthlyStats):
-    """Print statistics for each month to terminal.
-        ### Example output ###
-          Month          : 2013-12-31T00:00:00.000000Z
-          Monthly Average: 20894.2173562
-          Monthly Std Dev: 9.39171243572
-          Monthly Range  : 44.319
-
-    Parameters
-    ----------
-        monthlyStats : List <obspy.core.trac.Trace>
-            List of monthly statistics
-    """
-    for month in monthlyStats:
-        stats = month.stats
-        statistics = stats.statistics
-        print "  Month          : " + str(stats.starttime)
-        print "  Monthly Average: " + str(statistics['average'])
-        print "  Monthly Std Dev: " + str(statistics['standarddeviation'])
-        print "  Monthly Range  : " + str(statistics['maximum'] \
-            - statistics['minimum']) + "\n"
-
-def get_traces(trace, interval='hours'):
-    """Use array of times to slice up trace and collect statistics.
-
-    Parameters
-    ----------
-        trace :
-            a time-series trace of data
-        interval: String
-            Interval to use for trace boundaries.
-            Trace should include complete intervals.
-            'hours', 'days', 'months' are accepted
-    Returns
-    -------
-        array-like list of traces with statistics
-    """
-    traces = []
-
-    starttime = trace.stats.starttime
-    endtime = trace.stats.endtime
-
-    date = starttime
-
-    while date < endtime:
-        start = date
-        if interval == 'hours':
-            date = start + ONEHOUR
-        elif interval == 'days':
-            date = start + ONEDAY
-        elif interval == 'months':
-            year = date.year
-            month = date.month + 1
-            if month > 12:
-                month = 1
-                year += 1
-            date = UTCDateTime(year, month, 1)
-        end = date - ONEMINUTE
-
-        localTrace = trace.slice(start, end)
-        localTrace.stats.statistics = statistics(localTrace.data)
-
-        traces.append(localTrace)
-
-    return traces
+            print interval, "        : ", str(stats.starttime)
+            print interval, " Average: ", str(statistics['average'])
+            print interval, " Std Dev: ", str(statistics['standarddeviation'])
+            print interval, " Range  : ", str(statistics['maximum'] \
+                - statistics['minimum']), "\n"
 
 def statistics(data):
     """Calculate average, standard deviation, minimum and maximum on given
