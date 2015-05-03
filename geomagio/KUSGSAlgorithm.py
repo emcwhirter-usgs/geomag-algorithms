@@ -1,15 +1,14 @@
-"""
-    Creates K-USGS Indices from H and D time-series data.
-"""
+"""Creates K-USGS Indices from H and D time-series data."""
 
-import numpy as np
-from obspy.core import Trace, Stats, Stream, UTCDateTime
-import matplotlib
+import copy
+# DateFormatter, WeekdayLocator, DayLocator, MONDAY, date2num
+import matplotlib.dates
 import matplotlib.pyplot as plot
-from matplotlib.dates import DateFormatter, WeekdayLocator, DayLocator, MONDAY
+import numpy as np
+
 from Algorithm import Algorithm
 from geomagio import TimeseriesFactoryException
-import copy
+from obspy.core import Trace, Stats, Stream, UTCDateTime
 
 ONEMINUTE = 60
 ONEHOUR = 60 * ONEMINUTE
@@ -223,7 +222,7 @@ def dist_subplot(fig, months, monthCount, title, times, means, sets, offset):
     subplot.xaxis.set_major_formatter(DateFormatter('%b %d %Y'))
     subplot.grid(True)
 
-    times = matplotlib.dates.date2num(times)
+    times = date2num(times)
     plot.plot(times, means, color='blue', marker='+', label='MHVs')
 
     pts = 0
@@ -327,7 +326,7 @@ def kSubplot(fig, num, title, timeList, rLabel, mLabel, color='b', marker='s'):
         means.append(time.stats.statistics['average'])
         ranges.append(time.stats.statistics['maximum']
                 - time.stats.statistics['minimum'])
-    times = matplotlib.dates.date2num(times)
+    times = date2num(times)
 
     plot.errorbar(times, means, ranges, color='cyan', label=rLabel)
     plot.plot(times, means, color=color, marker=marker, label=mLabel)
@@ -544,13 +543,13 @@ def plot_ranges_helper(fig, title1, title2, list1, list2,
         means1.append(time.stats.statistics['average'])
         ranges1.append(time.stats.statistics['maximum']
                 - time.stats.statistics['minimum'])
-    times1 = matplotlib.dates.date2num(times1)
+    times1 = date2num(times1)
     for time in list2:
         times2.append(time.stats.starttime)
         means2.append(time.stats.statistics['average'])
         ranges2.append(time.stats.statistics['maximum']
                 - time.stats.statistics['minimum'])
-    times2 = matplotlib.dates.date2num(times2)
+    times2 = date2num(times2)
 
     ptsTotal = 0
     for mean in means1:
