@@ -23,8 +23,11 @@ class KUSGSAlgorithm(Algorithm):
     ----------
     """
 
-    def __init__(self):
+    def __init__(self, rangeLimit=1.0, distLimit=3.0):
         Algorithm.__init__(self, inchannels=['H'], outchannels=['H','H','H','H'])
+
+        self.rangeLimit = float(rangeLimit)
+        self.distLimit = float(distLimit)
 
     def check_stream(self, timeseries, channels):
         """Checks a stream to make certain all the required channels exist.
@@ -47,17 +50,22 @@ class KUSGSAlgorithm(Algorithm):
 
         Parameters
         ----------
-            out_stream: obspy.core.Stream
+            distLimit : Float
+                Standard deviation limit to use for eliminating based on
+                distribution.
+            out_stream : obspy.core.Stream
                 New stream object containing the converted coordinates.
+            rangeLimit : Float
+                Standard deviation limit to use for eliminating based on ranges.
         """
-        clean_MHVs(timeseries)
+        clean_MHVs(timeseries, self.rangeLimit, self.distLimit)
 
         out_stream = timeseries
 
         return out_stream
 
 
-def clean_MHVs(timeseries):
+def clean_MHVs(timeseries, rangeLimit, distributionLimit):
     """SR-Curve (Solar Regular Curve) uses 24 Mean Hourly Values (MHVs) for 1
     entire calendar day, plus the last 2 MHVs from the previous day and the
     first 2 MHVs from the following day. Thus the data is cleaned in daily
@@ -69,8 +77,8 @@ def clean_MHVs(timeseries):
     trace = timeseries.select(channel='H')[0]
     trace.stats.statistics = statistics(trace.data)
 
-    rangeLimit = 1.0        # 1 standard deviation TODO pass this in to the algorithm
-    distributionLimit = 3.0 # 3 standard deviations TODO pass this in to the algorithm
+    # rangeLimit = 1.0        # 1 standard deviation TODO pass this in to the algorithm
+    # distributionLimit = 3.0 # 3 standard deviations TODO pass this in to the algorithm
 
     # This algorithm operates on entire calendar days of 1-Minute values.
     totalMinutes = trace.stats.npts
