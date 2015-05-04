@@ -77,9 +77,6 @@ def clean_MHVs(timeseries, rangeLimit, distributionLimit):
     trace = timeseries.select(channel='H')[0]
     trace.stats.statistics = statistics(trace.data)
 
-    # rangeLimit = 1.0        # 1 standard deviation TODO pass this in to the algorithm
-    # distributionLimit = 3.0 # 3 standard deviations TODO pass this in to the algorithm
-
     # This algorithm operates on entire calendar days of 1-Minute values.
     totalMinutes = trace.stats.npts
     if (totalMinutes % MINUTESPERDAY) != 0:
@@ -107,7 +104,7 @@ def clean_MHVs(timeseries, rangeLimit, distributionLimit):
             dayHours = get_traces(day, 'hours')
             for dayHour in dayHours:
                 hour = clean_range(dayHour, maxRange)
-                hour = clean_distribution(hour, minimum, maximum)
+                hour = clean_distribution(hour, minimum, maximum, avg)
                 hours.append(hour)
                 rawHours.append(dayHour)
             days.append(day)
@@ -119,16 +116,16 @@ def clean_MHVs(timeseries, rangeLimit, distributionLimit):
     #     'After cleaning, all data')
     plot_distribution(rawHours, hours, months)
 
-    # plot_all(months, months, days, days, rawHours, hours)
-    # plot_months(months, months)
-    # plot_days(days, days, 'Input data', 'After')
+    # plot_all(months, days, rawHours)
+    # plot_months(months)
+    # plot_days(days)
 
     # print_times(hours, 'Hour', 'wide')
     # print_times(days, 'Day', 'wide')
     # print_times(months, 'Month', 'tall')
     print_all(trace.stats)
 
-def clean_distribution(hour, minimum, maximum):
+def clean_distribution(hour, minimum, maximum, monthAverage):
     """Elminiate any MHVs that are larger than maximum or smaller than minimum.
 
     Parameters
@@ -136,23 +133,28 @@ def clean_distribution(hour, minimum, maximum):
         hour : Trace <obspy.core.trac.Trace>
             Hourly trace with statistics
         minimum : Float
+            Minimum allowed hourly average
         maximum : Float
+            Maximum allowed hourly average
+        monthAverage : Float
+            The monthly average that the hour lies within
 
     Returns
     -------
-
+        Trace with updated statistics
     """
     clearAvg = False
 
     average = hour.stats.statistics['average']
 
-    if (average > maximum) or (average < minimum):
+    if (average > maximum) or (average < minimum) or (np.isnan(average)):
         clearAvg = True
 
     if clearAvg:
         stats = Stats(hour.stats)
         stats.statistics = copy.deepcopy(stats.statistics)
-        stats.statistics['average'] = np.nan
+        # stats.statistics['average'] = np.nan
+        stats.statistics['average'] = monthAverage
         return Trace(hour.data, stats)
 
     return hour
@@ -245,23 +247,17 @@ def get_traces(trace, interval='hours'):
 
     return traces
 
-def plot_all(monBefore, monAfter, dayBefore, dayAfter, hourBefore, hourAfter):
+def plot_all(months, days, hours):
     """Plot montly, daily, and hourly statistics before and after cleaning.
 
     Parameters
     ----------
-        monBefore : List <obspy.core.trac.Trace>
+        months : List <obspy.core.trac.Trace>
             List of monthly statistics before cleaning
-        monAfter : List <obspy.core.trac.Trace>
-            List of monthly statistics after cleaning
-        dayBefore : List <obspy.core.trac.Trace>
+        days : List <obspy.core.trac.Trace>
             List of daily statistics before cleaning
-        dayAfter : List <obspy.core.trac.Trace>
-            List of daily statistics after cleaning
-        hourBefore : List <obspy.core.trac.Trace>
+        hours : List <obspy.core.trac.Trace>
             List of hourly statistics before cleaning
-        hourAfter : List <obspy.core.trac.Trace>
-            List of hourly statistics after cleaning
     """
     fig = plot.figure('Average nT Values')
 
@@ -273,133 +269,189 @@ def plot_all(monBefore, monAfter, dayBefore, dayAfter, hourBefore, hourAfter):
     dayLabel = 'Hourly Mean Range'
     hourLabel = 'Minute Range'
 
-    ### Set up all of the plots BEFORE the data has been cleaned. ###
-    # Plot MONTHS before cleaning
-    plot_k_subplot(fig, 231, monthTitle, monBefore, monthLabel, 'Month', 'blue', 's')
+    plot_subplot(fig, 311, monthTitle, months, monthLabel,
+        'Month', 'blue', 's')
 
-    # Plot DAYS before cleaning
-    plot_k_subplot(fig, 232, dayTitle, dayBefore, dayLabel, 'Day', 'blue', '^')
+    plot_subplot(fig, 312, dayTitle, days, dayLabel,
+        'Day', 'blue', '^')
 
-    # Plot HOURS before cleaning
-    plot_k_subplot(fig, 233, hourTitle, hourBefore, hourLabel, 'MHVs', 'blue', '+')
-
-    #### Set up all of the plots AFTER the data has been cleaned. ###
-    # Plot MONTHS after cleaning
-    plot_k_subplot(fig, 234, monthTitle, monAfter, monthLabel, 'Month', 'green', 's')
-
-    # Plot DAYS after cleaning
-    plot_k_subplot(fig, 235, dayTitle, dayAfter, dayLabel, 'Day', 'green', '^')
-
-    # Plot HOURS after cleaning
-    plot_k_subplot(fig, 236, hourTitle, hourAfter, hourLabel, 'MHVs', 'green', '+')
+    plot_subplot(fig, 313, hourTitle, hours, hourLabel,
+        'MHVs', 'blue', '+')
 
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
     plot.show()
 
-def plot_days(dayBefore, dayAfter, beforeTitle='', afterTitle=''):
+def plot_days(days):
     """Plot daily statistics before and after cleaning.
 
     Parameters
     ----------
-        dayBefore : List <obspy.core.trac.Trace>
+        days : List <obspy.core.trac.Trace>
             List of daily statistics before cleaning
-        dayAfter : List <obspy.core.trac.Trace>
-            List of daily statistics after cleaning
-        beforeTitle: String
-            Title description to append to "before" plot title
-        afterTitle: String
-            Title description to append to "after" plot title
     """
     fig = plot.figure('Average daily nT Values')
 
     dayTitle = ' - Daily means (nT)'
     dayLabel = 'Hourly Mean Range'
 
-    beforeTitle = beforeTitle + dayTitle
-    afterTitle = afterTitle + dayTitle
+    beforeTitle = 'Daily means (nT) - entire data range'
 
-    plot_k_subplot(fig, 211, beforeTitle, dayBefore, dayLabel, 'Day', 'blue', '^')
-    plot_k_subplot(fig, 212, afterTitle, dayAfter, dayLabel, 'Day', 'green', '^')
+    plot_subplot(fig, 111, beforeTitle, days, dayLabel,
+        'Day', 'blue', '^')
 
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
     plot.show()
 
 def plot_distribution(rawHours, hours, months):
+    """Plot monthly statistics before and after cleaning.
+
+    Parameters
+    ----------
+        rawHours : List <obspy.core.trac.Trace>
+            List of hourly statistics before cleaning
+        hours : List <obspy.core.trac.Trace>
+            List of hourly statistics after cleaning
+        months : List <obspy.core.trac.Trace>
+            List of monthly statistics to use to separate plots
+    """
     fig = plot.figure("Montly Statistics")
 
-    plot_dist_helper(fig, rawHours, months, 2, 0)
-
-    plot_dist_helper(fig, hours, months, 2, 1)
+    plot_dist_helper(fig, rawHours, hours, months)
 
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
     plot.tight_layout()
     plot.show()
 
-def plot_dist_helper(fig, hours, months, sets=1, offset=0):
-    means = []
-    times = []
+def plot_dist_helper(fig, beforeTimes, afterTimes, months):
+    """Plot helper for distribution plotter. Separates subplots by month.
+
+    Parameters
+    ----------
+        fig : magplotlib.figure.Figure
+            Instance of plot.figure to attach the subplot to
+        beforeTimes : List <obspy.core.trac.Trace>
+            Array of times and stats before changes to use for plot
+        afterTimes : List <obspy.core.trac.Trace>
+            Array of times and stats after changes to use for plot
+        months : List <obspy.core.trac.Trace>
+            List of monthly statistics to use to separate plots
+    """
+    means1 = []
+    means2 = []
+    times1 = []
+    times2 = []
 
     prevMonth = -1
-    monthCount = 0
+    plotCount = 0
 
-    for hour in hours:
-        means.append(hour.stats.statistics['average'])
-        times.append(hour.stats.starttime)
+    count = 0
+    for hour in beforeTimes:
+        means1.append(hour.stats.statistics['average'])
+        times1.append(hour.stats.starttime)
+
+        means2.append(afterTimes[count].stats.statistics['average'])
+        times2.append(afterTimes[count].stats.starttime)
 
         hourMonth = hour.stats.starttime.month
         if (prevMonth != hourMonth):
-            if len(times) > 1:
-                plot_dist_subplot(fig, months, monthCount, prevTitle,
-                    times, means, sets, offset)
+            if len(times1) > 1:
+                plot_dist_subplot(fig, months, plotCount, title,
+                    times1, means1, times2, means2)
 
-            monthCount += 1
+            plotCount += 1
             prevMonth = hourMonth
-            prevTitle = hour.stats.starttime
-            means = []
-            times = []
+            title = hour.stats.starttime
+            means1 = []
+            times1 = []
+            means2 = []
+            times2 = []
 
-    plot_dist_subplot(fig, months, monthCount, prevTitle, times, means,
-        sets, offset)
+        count += 1
 
-def plot_dist_subplot(fig, months, monthCount, title, times, means, sets, offset):
+    plot_dist_subplot(fig, months, plotCount, title,
+        times1, means1, times2, means2)
+
+def plot_dist_subplot(fig, months, plotCount, title,
+                    times1, means1, times2, means2):
+    """
+    Parameters
+    ----------
+        fig : magplotlib.figure.Figure
+            Instance of plot.figure to attach the subplot to
+        months : List <obspy.core.trac.Trace>
+            List of monthly statistics to use to separate plots
+        plotCount : Integer
+            The number of the subplot to add to the figure
+        title : String
+            Title for the subplot
+        times1 : List <obspy.core.trac.Trace>
+            Array of times and stats before changes to use for plot
+        means1 : List <obspy.core.trac.Trace>
+            Array of means before changes to use for plot
+        times2 : List <obspy.core.trac.Trace>
+            Array of times and stats after changes to use for plot
+        means2 : List <obspy.core.trac.Trace>
+            Array of means before changes to use for plot
+    """
     monthTotal = len(months)
 
-    subplot = fig.add_subplot(int(str(sets*monthTotal) + "1"
-        + str(monthCount + offset*monthTotal)))
+    subplot = fig.add_subplot(int(str(monthTotal) + "1" + str(plotCount)))
 
     subplot.set_title("MHVs for " + title.strftime('%B %Y'))
     subplot.xaxis.set_major_locator(DayLocator([2,5,10,15,20,25,30]))
     subplot.xaxis.set_major_formatter(DateFormatter('%b %d %Y'))
     subplot.grid(True)
 
-    times = date2num(times)
-    plot.plot(times, means, color='blue', marker='+', label='MHVs')
+    times1 = date2num(times1)
+    times2 = date2num(times2)
+    plot.plot(times1, means1, color='#00bfff', marker='+', label='MHVs before')
+    plot.plot(times2, means2, color='#104e8b', marker='^', label='MHVs after')
 
     pts = 0
     total = 0
-    for mean in means:
+    for mean in means2:
         total += 1
         if not np.isnan(mean):
             pts += 1
     pts = str(pts) + " / " + str(total) + " pts (" + str(total/24) + " days)"
     plot.legend(loc='best', numpoints=1, frameon=False, title=pts)
 
-    mean = np.nanmean(means)
-    plot.plot([times[0], times[len(times)-1]],[mean, mean], lw=1,
+    mean = np.nanmean(means1)
+    plot.plot([times1[0], times1[len(times1)-1]],[mean, mean], lw=1,
         color='black', label='mean')
 
-    stddev = np.nanmax(means) - np.nanmin(means)
+    stddev = np.nanmax(means1) - np.nanmin(means1)
     lower = mean - 1.0*stddev
     upper = mean + 1.0*stddev
-    plot.fill_between(times, lower, upper, facecolor='red', alpha=0.1)
+    plot.fill_between(times1, lower, upper, facecolor='red', alpha=0.07)
     lower = mean - 2.0*stddev
     upper = mean + 2.0*stddev
-    plot.fill_between(times, lower, upper, facecolor='yellow', alpha=0.1)
+    plot.fill_between(times1, lower, upper, facecolor='yellow', alpha=0.08)
 
-def plot_k_subplot(fig, num, title, timeList, rLabel, mLabel, color='b', marker='s'):
+def plot_months(months):
+    """Plot monthly statistics before and after cleaning.
+
+    Parameters
+    ----------
+        months : List <obspy.core.trac.Trace>
+            List of monthly statistics before cleaning
+    """
+    fig = plot.figure('Average monthly nT Values')
+
+    monthTitle = 'Monthly means (nT)'
+    monthLabel = 'Daily mean range'
+
+    plot_subplot(fig, 111, monthTitle, months, monthLabel, 'Month', 'blue', 's')
+
+    mng = plot.get_current_fig_manager()
+    mng.window.showMaximized()
+    plot.show()
+
+def plot_subplot(fig, num, title, timeList, rLabel, mLabel,
+                color='b', marker='s'):
     """Helper method for making subplots.
 
     Parameters
@@ -459,28 +511,6 @@ def plot_k_subplot(fig, num, title, timeList, rLabel, mLabel, color='b', marker=
     lower = mean - 2.0*stddev
     upper = mean + 2.0*stddev
     plot.fill_between(times, lower, upper, facecolor='yellow', alpha=0.1)
-
-def plot_months(monBefore, monAfter):
-    """Plot monthly statistics before and after cleaning.
-
-    Parameters
-    ----------
-        monBefore : List <obspy.core.trac.Trace>
-            List of monthly statistics before cleaning
-        monAfter : List <obspy.core.trac.Trace>
-            List of monthly statistics after cleaning
-    """
-    fig = plot.figure('Average monthly nT Values')
-
-    monthTitle = 'Monthly means (nT)'
-    monthLabel = 'Daily mean range'
-
-    plot_k_subplot(fig, 211, monthTitle, monBefore, monthLabel, 'Month', 'blue', 's')
-    plot_k_subplot(fig, 212, monthTitle, monAfter, monthLabel, 'Month', 'green', 's')
-
-    mng = plot.get_current_fig_manager()
-    mng.window.showMaximized()
-    plot.show()
 
 def plot_ranges(time1, time2, title1='', title2=''):
     """Plot hourly statistics before and after cleaning.
