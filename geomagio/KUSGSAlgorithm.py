@@ -66,15 +66,38 @@ class KUSGSAlgorithm(Algorithm):
             self.rangeLimit : Float
                 Standard deviation limit to use for eliminating based on ranges.
         """
-        mhvs = clean_MHVs(timeseries, self.rangeLimit, self.distLimit)
+        months = clean_MHVs(timeseries, self.rangeLimit, self.distLimit)
+
+        # for month in months:
+        #     for hour in month.hours:
+        #         print hour
 
         # Create Solar Regular curve
         # TODO Next step is to implement the SR curve
-        create_SR_curve(mhvs)
+        # create_SR_curve(mhvs)
+        get_lines()
+        get_intercepts()
+        get_spline()
+
 
         out_stream = timeseries
 
         return out_stream
+
+def get_lines():
+    """Create least squares fit of straight lines to sliding set of 3 MHVs.
+    """
+    return
+
+def get_intercepts():
+    """Find intercepts of sliding window of best fit lines.
+    """
+    return
+
+def get_spline():
+    """Create a spine with 1 month of best fit line intercepts.
+    """
+    return
 
 def clean_MHVs(timeseries, rangeLimit, distributionLimit):
     """MHVs are excluded if they contain minute values that have a large range,
@@ -94,7 +117,8 @@ def clean_MHVs(timeseries, rangeLimit, distributionLimit):
 
     Returns
     -------
-        List containing complete set of clean MHVs.
+        List containing months with complete set of clean MHVs for the month
+        attached as month.hours.
     """
     trace = timeseries.select(channel='H')[0]
     trace.stats.statistics = statistics(trace.data)
@@ -112,7 +136,6 @@ def clean_MHVs(timeseries, rangeLimit, distributionLimit):
     hours = []
     rawHours = []
 
-    # Clean the data
     months = get_traces(trace, 'months')
     for month in months:
         avg = month.stats.statistics['average']
@@ -126,36 +149,44 @@ def clean_MHVs(timeseries, rangeLimit, distributionLimit):
 
             dayHours = get_traces(day, 'hours')
             for dayHour in dayHours:
+                # Clean out MHVs with ranges too large.
                 hour = clean_range(dayHour, maxRange)
+                # Clean out MHVs at the edges of the monthly distribution.
                 hour = clean_distribution(hour, minimum, maximum, avg)
                 hours.append(hour)
-                rawHours.append(dayHour)
-            days.append(day)
+                # hours[0].append(hour)
+                rawHours.append(dayHour)       # Kept for printing/plotting only
+            days.append(day)                   # Kept for printing/plotting only
+
+        month.hours = hours
+        hours = []
+
         # TODO change of plans, lets make the spline here while we already have
         # access to months and cleaned hours.
+        # create_SR_curve(hours)
+        # TODO change of plans again, it will be easier another way
 
-    print "DAYS"
-    print days
-    print "DAY"
-    for day in days:
-        print day
-    # Uncomment any of the lines below to see data printed and/or plotted
-    #   for evalutation purposes.
+    """Uncomment any of the lines below to see data printed and/or plotted
+       for evalutation purposes.
+    """
     # plot_ranges(rawHours, hours,
     #     'Before cleaning large minute ranges, all data',
     #     'After cleaning, all data')
     # plot_distribution(rawHours, hours, months)
+    # plot_distribution(rawHours, hours[0], months)
 
     # plot_all(months, days, rawHours)
     # plot_months(months)
     # plot_days(days)
 
-    # print_times(hours, 'Hour', 'wide')
-    # print_times(days, 'Day', 'wide')
-    # print_times(months, 'Month', 'tall')
+    # print_stats(hours, 'Hour', 'wide')
+    # print_stats(days, 'Day', 'wide')
+    # print_stats(months, 'Month', 'tall')
     print_all(trace.stats)
 
-    return hours
+    # return hours
+    # return hours[0]
+    return months
 
 def create_SR_curve(mhvs):
     print "SR stuff"
@@ -716,7 +747,7 @@ def print_all(stats):
     print "Range of all Minutes  : " \
         + str(statistics['maximum'] - statistics['minimum']) + "nT"
 
-def print_times(times, interval, format='wide'):
+def print_stats(times, interval, format='wide'):
     """Print statistics for each time to terminal.
 
     Parameters
