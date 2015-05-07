@@ -9,6 +9,7 @@ from geomagio import TimeseriesFactoryException
 from matplotlib.dates import \
         DateFormatter, WeekdayLocator, DayLocator, MONDAY, date2num
 from obspy.core import Trace, Stats, Stream, UTCDateTime
+from scipy import interpolate
 
 ONEMINUTE = 60
 ONEHOUR = 60 * ONEMINUTE
@@ -35,7 +36,7 @@ class KUSGSAlgorithm(Algorithm):
         Parameters
         ----------
             timeseries: obspy.core.Stream
-                Stream to be checked.
+                Stream object containing input data.
             channels: array_like
                 Channels that are expected in stream.
         """
@@ -47,32 +48,53 @@ class KUSGSAlgorithm(Algorithm):
 
     def process(self, timeseries):
         """Process the data to calculate K-USGS indices.
+        SR-Curve (Solar Regular Curve) uses 24 Mean Hourly Values (MHVs) for 1
+        entire calendar day, plus the last 2 MHVs from the previous day and the
+        first 2 MHVs from the following day. Thus the data is cleaned in daily
+        chuncks using 28 MHVs. MHVs are excluded if they contain minute
+        values that have a large range, or they fall in the tails of the
+        monthly MHV distribution. MHVs that are excluded or don't exist
+        are replaced with a daily or monthly mean.
 
         Parameters
         ----------
-            distLimit : Float
+            self.distLimit : Float
                 Standard deviation limit to use for eliminating based on
                 distribution.
-            out_stream : obspy.core.Stream
-                New stream object containing the converted coordinates.
-            rangeLimit : Float
+            timeseries : obspy.core.Stream
+                Stream object containing input data.
+            self.rangeLimit : Float
                 Standard deviation limit to use for eliminating based on ranges.
         """
-        clean_MHVs(timeseries, self.rangeLimit, self.distLimit)
+        mhvs = clean_MHVs(timeseries, self.rangeLimit, self.distLimit)
+
+        # Create Solar Regular curve
+        # TODO Next step is to implement the SR curve
+        create_SR_curve(mhvs)
 
         out_stream = timeseries
 
         return out_stream
 
-
 def clean_MHVs(timeseries, rangeLimit, distributionLimit):
-    """SR-Curve (Solar Regular Curve) uses 24 Mean Hourly Values (MHVs) for 1
-    entire calendar day, plus the last 2 MHVs from the previous day and the
-    first 2 MHVs from the following day. Thus the data is cleaned in daily
-    chuncks using 28 MHVs. MHVs are excluded if they contain minute
-    values that have a large range, or they fall in the tails of the
-    monthly MHV distribution. MHVs that are excluded or don't exist
-    are replaced with a daily or monthly mean.
+    """MHVs are excluded if they contain minute values that have a large range,
+    defined by rangeLimit or they fall in the tails of the monthly MHV
+    distribution, defined by distributionLimit. MHVs that are excluded or
+    don't exist are replaced with the corresponding monthly mean.
+
+    Parameters
+    ----------
+        distributionLimit : Float
+            Standard deviation limit to use for eliminating based on
+            distribution.
+        rangeLimit : Float
+            Standard deviation limit to use for eliminating based on ranges.
+        timeseries : obspy.core.Stream
+            Stream object containing input data.
+
+    Returns
+    -------
+        List containing complete set of clean MHVs.
     """
     trace = timeseries.select(channel='H')[0]
     trace.stats.statistics = statistics(trace.data)
@@ -90,6 +112,7 @@ def clean_MHVs(timeseries, rangeLimit, distributionLimit):
     hours = []
     rawHours = []
 
+    # Clean the data
     months = get_traces(trace, 'months')
     for month in months:
         avg = month.stats.statistics['average']
@@ -108,13 +131,20 @@ def clean_MHVs(timeseries, rangeLimit, distributionLimit):
                 hours.append(hour)
                 rawHours.append(dayHour)
             days.append(day)
+        # TODO change of plans, lets make the spline here while we already have
+        # access to months and cleaned hours.
 
+    print "DAYS"
+    print days
+    print "DAY"
+    for day in days:
+        print day
     # Uncomment any of the lines below to see data printed and/or plotted
     #   for evalutation purposes.
     # plot_ranges(rawHours, hours,
     #     'Before cleaning large minute ranges, all data',
     #     'After cleaning, all data')
-    plot_distribution(rawHours, hours, months)
+    # plot_distribution(rawHours, hours, months)
 
     # plot_all(months, days, rawHours)
     # plot_months(months)
@@ -124,6 +154,37 @@ def clean_MHVs(timeseries, rangeLimit, distributionLimit):
     # print_times(days, 'Day', 'wide')
     # print_times(months, 'Month', 'tall')
     print_all(trace.stats)
+
+    return hours
+
+def create_SR_curve(mhvs):
+    print "SR stuff"
+
+    means = []
+    times = []
+    for hour in mhvs:
+        means.append(hour.stats.statistics['average'])
+        times.append(hour.stats.starttime)
+        # times.append(hour.stats.starttime.timestamp)
+    print "Got means"
+    # f1 = interpolate.interp1d(times, means)
+    # print f1
+    tck = interpolate.splrep(times, means, s=0)
+    print tck
+    print "Length:", len(tck)
+    print tck[0]
+    print "INTERPOLATED 1"
+    xnew = np.arange(0,2*np.pi,np.pi/50)
+    ynew = interpolate.splev(xnew, tck, der=0)
+    print "INTERPOLATED 2"
+    # plot.plot(times, means, 'x', xnew, ynew, xnew, xnew, 'b')
+    plot.plot(times, means, 'x', times, means, 'b')
+    plot.plot(times, tck)
+    # plot.plot(times, means, 'x')
+    plot.show()
+
+    # f = interpolate.interp1d(times, means, kind='cubic')
+    # print f1
 
 def clean_distribution(hour, minimum, maximum, monthAverage):
     """Elminiate any MHVs that are larger than maximum or smaller than minimum.
@@ -153,7 +214,6 @@ def clean_distribution(hour, minimum, maximum, monthAverage):
     if clearAvg:
         stats = Stats(hour.stats)
         stats.statistics = copy.deepcopy(stats.statistics)
-        # stats.statistics['average'] = np.nan
         stats.statistics['average'] = monthAverage
         return Trace(hour.data, stats)
 
