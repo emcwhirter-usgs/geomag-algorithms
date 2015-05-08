@@ -71,20 +71,31 @@ class KUSGSAlgorithm(Algorithm):
         # for month in months:
         #     for hour in month.hours:
         #         print hour
+        # for hour in months[0].hours:
+        #     print hour
+        print len(months[0].hours), "total hours"
+        print len(months[0].hours)/24, "days"
+        print len(months[1].hours), "total hours"
+        print len(months[1].hours)/24, "days"
+        print len(months[2].hours), "total hours"
+        print len(months[2].hours)/24, "days"
+        print len(months[3].hours), "total hours"
+        print len(months[3].hours)/24, "days"
 
         # Create Solar Regular curve
         # TODO Next step is to implement the SR curve
         # create_SR_curve(mhvs)
-        get_lines()
-        get_intercepts()
-        get_spline()
+        for month in months:
+            get_lines(month)
+            get_intercepts()
+            get_spline()
 
 
         out_stream = timeseries
 
         return out_stream
 
-def get_lines():
+def get_lines(month):
     """Create least squares fit of straight lines to sliding set of 3 MHVs.
     """
     return
@@ -154,17 +165,11 @@ def clean_MHVs(timeseries, rangeLimit, distributionLimit):
                 # Clean out MHVs at the edges of the monthly distribution.
                 hour = clean_distribution(hour, minimum, maximum, avg)
                 hours.append(hour)
-                # hours[0].append(hour)
                 rawHours.append(dayHour)       # Kept for printing/plotting only
             days.append(day)                   # Kept for printing/plotting only
 
         month.hours = hours
         hours = []
-
-        # TODO change of plans, lets make the spline here while we already have
-        # access to months and cleaned hours.
-        # create_SR_curve(hours)
-        # TODO change of plans again, it will be easier another way
 
     """Uncomment any of the lines below to see data printed and/or plotted
        for evalutation purposes.
@@ -172,8 +177,7 @@ def clean_MHVs(timeseries, rangeLimit, distributionLimit):
     # plot_ranges(rawHours, hours,
     #     'Before cleaning large minute ranges, all data',
     #     'After cleaning, all data')
-    # plot_distribution(rawHours, hours, months)
-    # plot_distribution(rawHours, hours[0], months)
+    plot_distribution(rawHours, hours, months)
 
     # plot_all(months, days, rawHours)
     # plot_months(months)
@@ -184,8 +188,6 @@ def clean_MHVs(timeseries, rangeLimit, distributionLimit):
     # print_stats(months, 'Month', 'tall')
     print_all(trace.stats)
 
-    # return hours
-    # return hours[0]
     return months
 
 def create_SR_curve(mhvs):
@@ -439,28 +441,37 @@ def plot_dist_helper(fig, beforeTimes, afterTimes, months):
     plotCount = 0
 
     count = 0
+    lastMonth = beforeTimes[len(beforeTimes)-1].stats.starttime.month
     for hour in beforeTimes:
         means1.append(hour.stats.statistics['average'])
         times1.append(hour.stats.starttime)
 
-        means2.append(afterTimes[count].stats.statistics['average'])
-        times2.append(afterTimes[count].stats.starttime)
-
         hourMonth = hour.stats.starttime.month
         if (prevMonth != hourMonth):
             if len(times1) > 1:
+                monthHours = months[count].hours
+                for monthHour in monthHours:
+                    means2.append(monthHour.stats.statistics['average'])
+                    times2.append(monthHour.stats.starttime)
+                count += 1
+
                 plot_dist_subplot(fig, months, plotCount, title,
                     times1, means1, times2, means2)
 
             plotCount += 1
             prevMonth = hourMonth
             title = hour.stats.starttime
+
             means1 = []
             times1 = []
+
             means2 = []
             times2 = []
 
-        count += 1
+    monthHours = months[count].hours
+    for monthHour in monthHours:
+        means2.append(monthHour.stats.statistics['average'])
+        times2.append(monthHour.stats.starttime)
 
     plot_dist_subplot(fig, months, plotCount, title,
         times1, means1, times2, means2)
