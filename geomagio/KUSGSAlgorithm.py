@@ -73,36 +73,122 @@ class KUSGSAlgorithm(Algorithm):
         #         print hour
         # for hour in months[0].hours:
         #     print hour
-        print len(months[0].hours), "total hours"
-        print len(months[0].hours)/24, "days"
-        print len(months[1].hours), "total hours"
-        print len(months[1].hours)/24, "days"
-        print len(months[2].hours), "total hours"
-        print len(months[2].hours)/24, "days"
-        print len(months[3].hours), "total hours"
-        print len(months[3].hours)/24, "days"
+        # print len(months[0].hours), "total hours"
+        # print len(months[0].hours)/24, "days"
+        # print len(months[1].hours), "total hours"
+        # print len(months[1].hours)/24, "days"
+        # print len(months[2].hours), "total hours"
+        # print len(months[2].hours)/24, "days"
+        # print len(months[3].hours), "total hours"
+        # print len(months[3].hours)/24, "days"
+
+        # Get least square linear fit of sliding window over 3 MHVs at a time.
+        lines = get_lines(months)
+        # Get list of intercepts of all consecutive lines.
+        get_intercepts(lines)
+
+        get_spline()
 
         # Create Solar Regular curve
         # TODO Next step is to implement the SR curve
         # create_SR_curve(mhvs)
-        for month in months:
-            get_lines(month)
-            get_intercepts()
-            get_spline()
-
 
         out_stream = timeseries
 
         return out_stream
 
-def get_lines(month):
-    """Create least squares fit of straight lines to sliding set of 3 MHVs.
-    """
-    return
+def get_line(h0, h1, h2):
+    """Find least squares fit of straight line of 3 points.
 
-def get_intercepts():
-    """Find intercepts of sliding window of best fit lines.
+    Parameters
+    ----------
+        h0 : List <obspy.core.trac.Trace>
+            First hour trace with statistics
+        h1 : List <obspy.core.trac.Trace>
+            Second hour trace with statistics
+        h2 : List <obspy.core.trac.Trace>
+            Third hour trace with statistics
+
+    Returns
+    -------
+        Object with properties 'slope' and 'intercept' defined.
     """
+    x0 = h0.stats.starttime.timestamp
+    x1 = h1.stats.starttime.timestamp
+    x2 = h2.stats.starttime.timestamp
+
+    y0 = h0.stats.statistics['average']
+    y1 = h1.stats.statistics['average']
+    y2 = h2.stats.statistics['average']
+
+    sumX = (x0 + x1 + x2)
+    sumY = (y0 + y1 + y2)
+    sumXY = (x0*y0 + x1*y1 + x2*y2)
+    sumXX = (x0**2 + x1**2 + x2**2)
+
+    slope = (3*sumXY - sumX * sumY) / (3*sumXX - sumX**2)
+    intercept = (sumY*sumXX - sumX*sumXY) / (3*sumXX - sumX**2)
+
+    return {'slope': slope, 'intercept': intercept}
+
+def get_lines(months):
+    """Create least squares fit of straight lines to sliding set of 3 MHVs.
+
+    Parameters
+    ----------
+        months : List <obspy.core.trac.Trace>
+            List containing months with MHVs for the month attached as
+            month.hours.
+
+    Returns
+    -------
+        List of line segments defined by 'slope' and 'intercept' for y=mx+b
+    """
+    lines = []
+
+    for i in range(1, len(months)-2):
+        m0 = months[i-1]
+        m1 = months[i]
+        m2 = months[i+1]
+
+        allHours = m0.hours[-2:] + m1.hours + m2.hours[0:2]
+
+        for j in range(1, len(allHours)-2):
+            h0 = allHours[j-1]
+            h1 = allHours[j]
+            h2 = allHours[j+1]
+
+            lines.append(get_line(h0, h1, h2))
+
+    return lines
+
+def get_intercepts(lines):
+    """Find intercepts of consecutive straight lines.
+
+    Parameters
+    ----------
+        lines : List
+            Array-like list of line segments defined by object with 'slope' and
+            'intercept' for y=mx+b
+    """
+    for i in range(1, len(lines)-1):
+        line0 = lines[i-1]
+        line1 = lines[i]
+
+        m0 = line0['slope']
+        m1 = line1['slope']
+        if m0 == m1:
+            "horizontal line"
+
+        b0 = line0['intercept']
+        b1 = line1['intercept']
+
+        x = (b1 - b0) / (m0 - m1)
+        y = m0 * x + b0
+
+        yCheck = m1 * x + b0
+        # print x, "COMPARE", y, "TO", yCheck
+
     return
 
 def get_spline():
@@ -177,7 +263,7 @@ def clean_MHVs(timeseries, rangeLimit, distributionLimit):
     # plot_ranges(rawHours, hours,
     #     'Before cleaning large minute ranges, all data',
     #     'After cleaning, all data')
-    plot_distribution(rawHours, hours, months)
+    # plot_distribution(rawHours, hours, months)
 
     # plot_all(months, days, rawHours)
     # plot_months(months)
