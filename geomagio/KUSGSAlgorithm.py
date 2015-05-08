@@ -85,9 +85,9 @@ class KUSGSAlgorithm(Algorithm):
         # Get least square linear fit of sliding window over 3 MHVs at a time.
         lines = get_lines(months)
         # Get list of intercepts of all consecutive lines.
-        get_intercepts(lines)
+        intercepts = get_intercepts(lines)
 
-        get_spline()
+        get_spline(intercepts)
 
         # Create Solar Regular curve
         # TODO Next step is to implement the SR curve
@@ -129,7 +129,7 @@ def get_line(h0, h1, h2):
     slope = (3*sumXY - sumX * sumY) / (3*sumXX - sumX**2)
     intercept = (sumY*sumXX - sumX*sumXY) / (3*sumXX - sumX**2)
 
-    return {'slope': slope, 'intercept': intercept}
+    return {'slope': slope, 'intercept': intercept, 'x': x1, 'y': y1}
 
 def get_lines(months):
     """Create least squares fit of straight lines to sliding set of 3 MHVs.
@@ -170,28 +170,37 @@ def get_intercepts(lines):
         lines : List
             Array-like list of line segments defined by object with 'slope' and
             'intercept' for y=mx+b
+
+    Returns
+    -------
+        List of intercept objects with 'x' and 'y' defined.
     """
+    intercepts = []
+
     for i in range(1, len(lines)-1):
         line0 = lines[i-1]
         line1 = lines[i]
 
         m0 = line0['slope']
         m1 = line1['slope']
-        if m0 == m1:
-            "horizontal line"
 
-        b0 = line0['intercept']
-        b1 = line1['intercept']
+        if ((m0 - m1) == 0):
+            # Same slope, no intercept
+            # Using the original point
+            intercepts.append({'x': line1['x'], 'y': line1['y']})
 
-        x = (b1 - b0) / (m0 - m1)
-        y = m0 * x + b0
+        else:
+            b0 = line0['intercept']
+            b1 = line1['intercept']
 
-        yCheck = m1 * x + b0
-        # print x, "COMPARE", y, "TO", yCheck
+            x = (b1 - b0) / (m0 - m1)
+            y = m0 * x + b0
 
-    return
+            intercepts.append({'x': x, 'y': y})
 
-def get_spline():
+    return intercepts
+
+def get_spline(intercepts):
     """Create a spine with 1 month of best fit line intercepts.
     """
     return
