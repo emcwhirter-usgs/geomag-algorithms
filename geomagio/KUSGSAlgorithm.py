@@ -175,7 +175,9 @@ def get_intercepts(lines):
     -------
         List of intercept objects with 'x' and 'y' defined.
     """
-    intercepts = []
+    # intercepts = []
+    xIntercepts = []
+    yIntercepts = []
 
     for i in range(1, len(lines)-1):
         line0 = lines[i-1]
@@ -187,7 +189,9 @@ def get_intercepts(lines):
         if ((m0 - m1) == 0):
             # Same slope, no intercept
             # Using the original point
-            intercepts.append({'x': line1['x'], 'y': line1['y']})
+            # intercepts.append({'x': line1['x'], 'y': line1['y']})
+            xIntercepts.append(line1['x'])
+            yIntercepts.append(line1['y'])
 
         else:
             b0 = line0['intercept']
@@ -196,13 +200,17 @@ def get_intercepts(lines):
             x = (b1 - b0) / (m0 - m1)
             y = m0 * x + b0
 
-            intercepts.append({'x': x, 'y': y})
+            # intercepts.append({'x': x, 'y': y})
+            xIntercepts.append(x)
+            yIntercepts.append(y)
 
-    return intercepts
+    # return intercepts
+    return {'x-intercepts': xIntercepts, 'y-intercepts': yIntercepts}
 
 def get_spline(intercepts):
-    """Create a spine with 1 month of best fit line intercepts.
+    """Create a spline with list of best fit line intercepts.
     """
+
     return
 
 def clean_MHVs(timeseries, rangeLimit, distributionLimit):
