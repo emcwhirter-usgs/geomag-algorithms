@@ -1,6 +1,7 @@
 """Creates K-USGS Indices from H and D time-series data."""
 
 import copy
+import datetime
 import matplotlib.pyplot as plot
 import numpy as np
 
@@ -68,26 +69,13 @@ class KUSGSAlgorithm(Algorithm):
         """
         months = clean_MHVs(timeseries, self.rangeLimit, self.distLimit)
 
-        # for month in months:
-        #     for hour in month.hours:
-        #         print hour
-        # for hour in months[0].hours:
-        #     print hour
-        # print len(months[0].hours), "total hours"
-        # print len(months[0].hours)/24, "days"
-        # print len(months[1].hours), "total hours"
-        # print len(months[1].hours)/24, "days"
-        # print len(months[2].hours), "total hours"
-        # print len(months[2].hours)/24, "days"
-        # print len(months[3].hours), "total hours"
-        # print len(months[3].hours)/24, "days"
-
         # Get least square linear fit of sliding window over 3 MHVs at a time.
         lines = get_lines(months)
         # Get list of intercepts of all consecutive lines.
         intercepts = get_intercepts(lines)
 
-        get_spline(intercepts)
+        plot_spline(intercepts, lines)
+        # get_spline(intercepts, lines)
 
         # Create Solar Regular curve
         # TODO Next step is to implement the SR curve
@@ -190,6 +178,12 @@ def get_intercepts(lines):
             # Same slope, no intercept
             # Using the original point
             # intercepts.append({'x': line1['x'], 'y': line1['y']})
+            # print "Same Slope:", line1['x'], line1['y'], i
+            xIntercepts.append(line1['x'])
+            yIntercepts.append(line1['y'])
+
+        elif (m0 == 0 or m1 == 0):
+            # one of them is horizontal
             xIntercepts.append(line1['x'])
             yIntercepts.append(line1['y'])
 
@@ -197,9 +191,15 @@ def get_intercepts(lines):
             b0 = line0['intercept']
             b1 = line1['intercept']
 
+            if i == 189:
+                print m0, m1
+                print b0, b1
+
             x = (b1 - b0) / (m0 - m1)
             y = m0 * x + b0
 
+            if i == 189:
+                print "Different Slope:", x, y, i
             # intercepts.append({'x': x, 'y': y})
             xIntercepts.append(x)
             yIntercepts.append(y)
@@ -210,6 +210,18 @@ def get_intercepts(lines):
 def get_spline(intercepts):
     """Create a spline with list of best fit line intercepts.
     """
+    x = intercepts['x-intercepts']
+    y = intercepts['y-intercepts']
+
+    # print "X's", x
+    # print "Y's", y
+    print len(x)
+    print len(y)
+
+    times = []
+
+    for time in x:
+        times.append(datetime.datetime.utcfromtimestamp(time))
 
     return
 
@@ -635,6 +647,81 @@ def plot_dist_subplot(fig, months, plotCount, title,
     lower = mean - 2.0*stddev
     upper = mean + 2.0*stddev
     plot.fill_between(times1, lower, upper, facecolor='yellow', alpha=0.08)
+
+def plot_spline(intercepts, lines):
+    """Create a spline with list of best fit line intercepts.
+    """
+    x = intercepts['x-intercepts']
+    y = intercepts['y-intercepts']
+
+    print len(x), "pts", len(x) / 24, "days"
+    print len(y), "pts", len(y) / 24, "days"
+
+    times = []
+    count = 1
+    for time in x:
+        times.append(datetime.datetime.utcfromtimestamp(time))
+        count += 1
+
+    fig = plot.figure('MHV linear fit intercepts.')
+
+    # TODO - use the entire range, instead of just the first 24 points
+    plot.plot(times[0:24], y[0:24], color='blue', marker='+', label='Intercepts')
+
+    lineX = []
+    lineY = []
+    slopes = []
+    intercepts = []
+    for line in lines:
+        lineX.append(datetime.datetime.utcfromtimestamp(line['x']))
+        lineY.append(line['y'])
+        slopes.append(line['slope'])
+        intercepts.append(line['intercept'])
+    print len(lineX), "pts", len(lineX) / 24, "days"
+    print len(lineY), "pts", len(lineY) / 24, "days"
+    # TODO - use the entire range, instead of just the first 24 points
+    plot.plot(lineX[0:24], lineY[0:24], color='green', label='Line X,Y')
+
+    # TODO - use the entire range, instead of just the first 24 points
+    plot_lines(slopes[0:24], intercepts[0:24], x[0:24], y[0:24])
+    # slope, intercept = np.polyfit(slopes[0], intercepts[0], 1)
+    # plot.plot(slopes[0], slopes[0]*slope + intercept, 'r')
+
+
+    plot.legend(loc='best', numpoints=1, frameon=False)
+    mng = plot.get_current_fig_manager()
+    mng.window.showMaximized()
+    plot.tight_layout()
+    plot.show()
+    return
+
+def plot_lines(m, b, x, y):
+    print "X's", len(x), ":", x
+    print "Y's", len(y), ":", y
+
+    # slope, intercept = np.polyfit(x, y, 1)
+    times = []
+    equations = []
+    count = 0
+    # for time in x:
+    #     equation = time*m[count] + b[count]
+    #     equations.append(equation)
+    #     times.append(datetime.datetime.utcfromtimestamp(time))
+    #     # plot.plot(times, equations, 'r', label="Lines")
+    #     plot.plot()
+    #     count += 1
+    for i in range(1, len(x)-1):
+        x0 = datetime.datetime.utcfromtimestamp(x[i-1])
+        x1 = datetime.datetime.utcfromtimestamp(x[i])
+        x2 = datetime.datetime.utcfromtimestamp(x[i+1])
+        y0 = y[i-1]
+        y1 = y[i]
+        y2 = y[i+1]
+        plot.plot([x0,x1,x2],[y0,y1,y2])
+        # print x[i]
+
+    # plot.plot(times, equations, 'r', label="Lines")
+
 
 def plot_months(months):
     """Plot monthly statistics before and after cleaning.
