@@ -67,10 +67,13 @@ class KUSGSAlgorithm(Algorithm):
             self.rangeLimit : Float
                 Standard deviation limit to use for eliminating based on ranges.
         """
+        # Clean up the data and make it continuous.
         months = clean_mhvs(timeseries, self.rangeLimit, self.distLimit)
 
         # Get least square linear fit of sliding window over 3 MHVs at a time.
         lines = get_lines(months)
+        plot_lines(lines)
+
         # Get list of intercepts of all consecutive lines.
         intercepts = get_intercepts(lines)
 
@@ -411,8 +414,8 @@ def get_spline(intercepts):
 
     # print "X's", x
     # print "Y's", y
-    print len(x)
-    print len(y)
+    # print len(x)
+    # print len(y)
 
     times = []
 
@@ -658,9 +661,68 @@ def plot_dist_subplot(fig, months, plotCount, title,
     upper = mean + 2.0*stddev
     plot.fill_between(times1, lower, upper, facecolor='yellow', alpha=0.08)
 
-def plot_lines(m, b, x, y):
-    print "X's", len(x), ":", x
-    print "Y's", len(y), ":", y
+def plot_lines(lines):
+    x = []
+    y = []
+    y2 = []
+
+    count = 0
+    begin = 0
+    cap = 10000
+    for line in lines:
+        localX = line['x']
+        localY = line['y']
+
+        m = line['slope']
+        b = line['intercept']
+        localY2 = m * localX + b
+
+        if count >= begin:
+            x.append(localX)
+            y.append(localY)
+            y2.append(localY2)
+
+        count += 1
+        if count > cap:
+            break
+
+    fig, ax = plot.subplots()
+    ax.set_color_cycle(['red', 'orange', 'yellow'])
+
+    plot.plot(x, y, label="x & y", color='blue')
+    plot.plot(x, y2, label="x & y = mx + b", color='green')
+
+    count = 0
+    for line in lines:
+        localX = line['x']
+
+        m = line['slope']
+        b = line['intercept']
+        localY2 = m * localX + b
+
+        if count > 0 and count >= begin:
+            xDiff = localX - prevX
+            yDiff = localY2 - prevY
+            plot.plot([prevX-xDiff, localX, localX+xDiff],
+                    [prevY-yDiff, localY2, localY2+yDiff])
+
+        prevX = localX
+        prevY = localY2
+
+        count += 1
+        if count > cap:
+            break
+
+    pts = str(count-begin-1) + " pts"
+    plot.legend(loc='best', title=pts)
+    mng = plot.get_current_fig_manager()
+    mng.window.showMaximized()
+    plot.tight_layout()
+    plot.show()
+
+def plot_lines_2(m, b, x, y):
+    # print "X's", len(x), ":", x
+    # print "Y's", len(y), ":", y
 
     # slope, intercept = np.polyfit(x, y, 1)
     times = []
@@ -864,7 +926,7 @@ def plot_spline(intercepts, lines):
     plot.plot(lineX[0:24], lineY[0:24], color='green', label='Line X,Y')
 
     # TODO - use the entire range, instead of just the first 24 points
-    plot_lines(slopes[0:24], intercepts[0:24], x[0:24], y[0:24])
+    plot_lines_2(slopes[0:24], intercepts[0:24], x[0:24], y[0:24])
     # slope, intercept = np.polyfit(slopes[0], intercepts[0], 1)
     # plot.plot(slopes[0], slopes[0]*slope + intercept, 'r')
 
