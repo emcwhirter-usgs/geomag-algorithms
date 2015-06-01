@@ -67,7 +67,7 @@ class KUSGSAlgorithm(Algorithm):
             self.rangeLimit : Float
                 Standard deviation limit to use for eliminating based on ranges.
         """
-        months = clean_MHVs(timeseries, self.rangeLimit, self.distLimit)
+        months = clean_mhvs(timeseries, self.rangeLimit, self.distLimit)
 
         # Get least square linear fit of sliding window over 3 MHVs at a time.
         lines = get_lines(months)
@@ -79,153 +79,49 @@ class KUSGSAlgorithm(Algorithm):
 
         # Create Solar Regular curve
         # TODO Next step is to implement the SR curve
-        # create_SR_curve(mhvs)
+        # create_sr_curve(mhvs)
 
         out_stream = timeseries
 
         return out_stream
 
-def get_line(h0, h1, h2):
-    """Find least squares fit of straight line of 3 points.
+def clean_distribution(hour, minimum, maximum, monthAverage):
+    """Clean out MHVs at the edges of the monthly distribution, which is done
+    by elminiating any MHVs that are larger than maximum or smaller than
+    minimum. These eliminated values, along with any other NaNs in the data
+    are replaced with the monthly average.
 
     Parameters
     ----------
-        h0 : List <obspy.core.trac.Trace>
-            First hour trace with statistics
-        h1 : List <obspy.core.trac.Trace>
-            Second hour trace with statistics
-        h2 : List <obspy.core.trac.Trace>
-            Third hour trace with statistics
+        hour : Trace <obspy.core.trac.Trace>
+            Hourly trace with statistics
+        minimum : Float
+            Minimum allowed hourly average
+        maximum : Float
+            Maximum allowed hourly average
+        monthAverage : Float
+            The monthly average for the month that the hour lies within
 
     Returns
     -------
-        Object with properties 'slope' and 'intercept' defined.
+        Trace with updated statistics.
     """
-    x0 = h0.stats.starttime.timestamp
-    x1 = h1.stats.starttime.timestamp
-    x2 = h2.stats.starttime.timestamp
+    clearAvg = False
 
-    y0 = h0.stats.statistics['average']
-    y1 = h1.stats.statistics['average']
-    y2 = h2.stats.statistics['average']
+    average = hour.stats.statistics['average']
 
-    sumX = (x0 + x1 + x2)
-    sumY = (y0 + y1 + y2)
-    sumXY = (x0*y0 + x1*y1 + x2*y2)
-    sumXX = (x0**2 + x1**2 + x2**2)
+    if (average > maximum) or (average < minimum) or (np.isnan(average)):
+        clearAvg = True
 
-    slope = (3*sumXY - sumX * sumY) / (3*sumXX - sumX**2)
-    intercept = (sumY*sumXX - sumX*sumXY) / (3*sumXX - sumX**2)
+    if clearAvg:
+        stats = Stats(hour.stats)
+        stats.statistics = copy.deepcopy(stats.statistics)
+        stats.statistics['average'] = monthAverage
+        return Trace(hour.data, stats)
 
-    return {'slope': slope, 'intercept': intercept, 'x': x1, 'y': y1}
+    return hour
 
-def get_lines(months):
-    """Create least squares fit of straight lines to sliding set of 3 MHVs.
-
-    Parameters
-    ----------
-        months : List <obspy.core.trac.Trace>
-            List containing months with MHVs for the month attached as
-            month.hours.
-
-    Returns
-    -------
-        List of line segments defined by 'slope' and 'intercept' for y=mx+b
-    """
-    lines = []
-
-    for i in range(1, len(months)-2):
-        m0 = months[i-1]
-        m1 = months[i]
-        m2 = months[i+1]
-
-        allHours = m0.hours[-2:] + m1.hours + m2.hours[0:2]
-
-        for j in range(1, len(allHours)-2):
-            h0 = allHours[j-1]
-            h1 = allHours[j]
-            h2 = allHours[j+1]
-
-            lines.append(get_line(h0, h1, h2))
-
-    return lines
-
-def get_intercepts(lines):
-    """Find intercepts of consecutive straight lines.
-
-    Parameters
-    ----------
-        lines : List
-            Array-like list of line segments defined by object with 'slope' and
-            'intercept' for y=mx+b
-
-    Returns
-    -------
-        List of intercept objects with 'x' and 'y' defined.
-    """
-    # intercepts = []
-    xIntercepts = []
-    yIntercepts = []
-
-    for i in range(1, len(lines)-1):
-        line0 = lines[i-1]
-        line1 = lines[i]
-
-        m0 = line0['slope']
-        m1 = line1['slope']
-
-        if ((m0 - m1) == 0):
-            # Same slope, no intercept
-            # Using the original point
-            # intercepts.append({'x': line1['x'], 'y': line1['y']})
-            # print "Same Slope:", line1['x'], line1['y'], i
-            xIntercepts.append(line1['x'])
-            yIntercepts.append(line1['y'])
-
-        elif (m0 == 0 or m1 == 0):
-            # one of them is horizontal
-            xIntercepts.append(line1['x'])
-            yIntercepts.append(line1['y'])
-
-        else:
-            b0 = line0['intercept']
-            b1 = line1['intercept']
-
-            if i == 189:
-                print m0, m1
-                print b0, b1
-
-            x = (b1 - b0) / (m0 - m1)
-            y = m0 * x + b0
-
-            if i == 189:
-                print "Different Slope:", x, y, i
-            # intercepts.append({'x': x, 'y': y})
-            xIntercepts.append(x)
-            yIntercepts.append(y)
-
-    # return intercepts
-    return {'x-intercepts': xIntercepts, 'y-intercepts': yIntercepts}
-
-def get_spline(intercepts):
-    """Create a spline with list of best fit line intercepts.
-    """
-    x = intercepts['x-intercepts']
-    y = intercepts['y-intercepts']
-
-    # print "X's", x
-    # print "Y's", y
-    print len(x)
-    print len(y)
-
-    times = []
-
-    for time in x:
-        times.append(datetime.datetime.utcfromtimestamp(time))
-
-    return
-
-def clean_MHVs(timeseries, rangeLimit, distributionLimit):
+def clean_mhvs(timeseries, rangeLimit, distributionLimit):
     """MHVs are excluded if they contain minute values that have a large range,
     defined by rangeLimit or they fall in the tails of the monthly MHV
     distribution, defined by distributionLimit. MHVs that are excluded or
@@ -289,23 +185,69 @@ def clean_MHVs(timeseries, rangeLimit, distributionLimit):
     """Uncomment any of the lines below to see data printed and/or plotted
        for evalutation purposes.
     """
-    # plot_ranges(rawHours, hours,
-    #     'Before cleaning large minute ranges, all data',
-    #     'After cleaning, all data')
-    # plot_distribution(rawHours, hours, months)
-
-    # plot_all(months, days, rawHours)
-    # plot_months(months)
+    # Daily statistics - Average, Range and Standard Deviation #
+    # print_stats(days, 'Day', 'wide')
     # plot_days(days)
 
-    # print_stats(hours, 'Hour', 'wide')
-    # print_stats(days, 'Day', 'wide')
+    # Monthly statistics - Average, Range and Standard Deviation #
     # print_stats(months, 'Month', 'tall')
-    print_all(trace.stats)
+    # plot_months(months)
+
+    # Total statistics - Average, Range and Standard Deviation #
+    # print_all(trace.stats)
+    # plot_all(months, days, rawHours)
+    # print_stats(hours, 'Hour', 'wide')
+
+    # Plot all data on 1 figure separated by month #
+    # plot_distribution(rawHours, hours, months)
 
     return months
 
-def create_SR_curve(mhvs):
+def clean_range(hour, maxRange):
+    """Replace any hours within each month that have a range of minutes that
+    is larger than maxRange with NaN. Also, eliminates any hours that have less
+    than 30 minutes of valid (non-NaN) data.
+
+    Parameters
+    ----------
+        hour : Trace <obspy.core.trac.Trace>
+            Hourly trace with statistics
+        maxRange : Float
+            Number of standard deviations (from the monthly statistics) to
+            use as the acceptable range of minutes within each hour in the
+            month. Default is 1 Standard Deviation.
+
+    Returns
+    -------
+        Trace with updated statistics.
+    """
+    trace = []
+
+    clearAvg = False
+
+    maximum = hour.stats.statistics['maximum']
+    minimum = hour.stats.statistics['minimum']
+    hourRange = maximum - minimum
+
+    if hourRange > maxRange:
+        clearAvg = True
+
+    else:
+        nanMinuteCount = len(hour.data[hour.data == np.nan])
+
+        # If half of the minute values are bad, the entire hour is bad.
+        if nanMinuteCount >= 30:
+            clearAvg = True
+
+    if clearAvg:
+        stats = Stats(hour.stats)
+        stats.statistics = copy.deepcopy(stats.statistics)
+        stats.statistics['average'] = np.nan
+        return Trace(hour.data, stats)
+
+    return hour
+
+def create_sr_curve(mhvs):
     print "SR stuff"
 
     means = []
@@ -334,82 +276,150 @@ def create_SR_curve(mhvs):
     # f = interpolate.interp1d(times, means, kind='cubic')
     # print f1
 
-def clean_distribution(hour, minimum, maximum, monthAverage):
-    """Elminiate any MHVs that are larger than maximum or smaller than minimum.
+def get_intercepts(lines):
+    """Find intercepts of consecutive straight lines.
 
     Parameters
     ----------
-        hour : Trace <obspy.core.trac.Trace>
-            Hourly trace with statistics
-        minimum : Float
-            Minimum allowed hourly average
-        maximum : Float
-            Maximum allowed hourly average
-        monthAverage : Float
-            The monthly average that the hour lies within
+        lines : List
+            Array-like list of line segments defined by object with 'slope' and
+            'intercept' for y=mx+b
 
     Returns
     -------
-        Trace with updated statistics
+        List of intercept objects with 'x' and 'y' defined.
     """
-    clearAvg = False
+    # intercepts = []
+    xIntercepts = []
+    yIntercepts = []
 
-    average = hour.stats.statistics['average']
+    for i in range(1, len(lines)-1):
+        line0 = lines[i-1]
+        line1 = lines[i]
 
-    if (average > maximum) or (average < minimum) or (np.isnan(average)):
-        clearAvg = True
+        m0 = line0['slope']
+        m1 = line1['slope']
 
-    if clearAvg:
-        stats = Stats(hour.stats)
-        stats.statistics = copy.deepcopy(stats.statistics)
-        stats.statistics['average'] = monthAverage
-        return Trace(hour.data, stats)
+        if ((m0 - m1) == 0):
+            # Same slope, no intercept
+            # Using the original point
+            # intercepts.append({'x': line1['x'], 'y': line1['y']})
+            # print "Same Slope:", line1['x'], line1['y'], i
+            xIntercepts.append(line1['x'])
+            yIntercepts.append(line1['y'])
 
-    return hour
+        elif (m0 == 0 or m1 == 0):
+            # one of them is horizontal
+            xIntercepts.append(line1['x'])
+            yIntercepts.append(line1['y'])
 
-def clean_range(hour, maxRange):
-    """Replace any hours within each month that have a range of minutes that
-    is larger than maxRange with NaN. Also, eliminates any hours that have less
-    than 30 minutes of valid (non-NaN) data.
+        else:
+            b0 = line0['intercept']
+            b1 = line1['intercept']
+
+            if i == 189:
+                print m0, m1
+                print b0, b1
+
+            x = (b1 - b0) / (m0 - m1)
+            y = m0 * x + b0
+
+            if i == 189:
+                print "Different Slope:", x, y, i
+            # intercepts.append({'x': x, 'y': y})
+            xIntercepts.append(x)
+            yIntercepts.append(y)
+
+    # return intercepts
+    return {'x-intercepts': xIntercepts, 'y-intercepts': yIntercepts}
+
+def get_line(h0, h1, h2):
+    """Find least squares fit of straight line of 3 points.
 
     Parameters
     ----------
-        hour : Trace <obspy.core.trac.Trace>
-            Hourly trace with statistics
-        maxRange : Float
-            Number of standard deviations (from the monthly statistics) to
-            use as the acceptable range of minutes within each hour in the
-            month. Default is 1 Standard Deviation.
+        h0 : List <obspy.core.trac.Trace>
+            First hour trace with statistics
+        h1 : List <obspy.core.trac.Trace>
+            Second hour trace with statistics
+        h2 : List <obspy.core.trac.Trace>
+            Third hour trace with statistics
 
     Returns
     -------
-        Trace with updated statistics
+        Object with properties 'slope' and 'intercept' defined.
     """
-    trace = []
+    x0 = h0.stats.starttime.timestamp
+    x1 = h1.stats.starttime.timestamp
+    x2 = h2.stats.starttime.timestamp
 
-    clearAvg = False
+    y0 = h0.stats.statistics['average']
+    y1 = h1.stats.statistics['average']
+    y2 = h2.stats.statistics['average']
 
-    maximum = hour.stats.statistics['maximum']
-    minimum = hour.stats.statistics['minimum']
-    hourRange = maximum - minimum
+    sumX = (x0 + x1 + x2)
+    sumY = (y0 + y1 + y2)
+    sumXY = (x0*y0 + x1*y1 + x2*y2)
+    sumXX = (x0**2 + x1**2 + x2**2)
 
-    if hourRange > maxRange:
-        clearAvg = True
+    slope = (3*sumXY - sumX * sumY) / (3*sumXX - sumX**2)
+    intercept = (sumY*sumXX - sumX*sumXY) / (3*sumXX - sumX**2)
 
-    else:
-        nanMinuteCount = len(hour.data[hour.data == np.nan])
+    return {'slope': slope, 'intercept': intercept, 'x': x1, 'y': y1}
 
-        # If half of the minute values are bad, the entire hour is bad.
-        if nanMinuteCount >= 30:
-            clearAvg = True
+def get_lines(months):
+    """Create least squares fit of straight lines to sliding set of 3 MHVs.
 
-    if clearAvg:
-        stats = Stats(hour.stats)
-        stats.statistics = copy.deepcopy(stats.statistics)
-        stats.statistics['average'] = np.nan
-        return Trace(hour.data, stats)
+    Parameters
+    ----------
+        months : List <obspy.core.trac.Trace>
+            List containing months with MHVs for the month attached as
+            month.hours.
 
-    return hour
+    Returns
+    -------
+        List of line segments defined by 'slope' and 'intercept' for y=mx+b.
+    """
+    lines = []
+
+    for i in range(1, len(months)-2):
+        m0 = months[i-1]
+        m1 = months[i]
+        m2 = months[i+1]
+
+        allHours = m0.hours[-2:] + m1.hours + m2.hours[0:2]
+
+        for j in range(1, len(allHours)-2):
+            h0 = allHours[j-1]
+            h1 = allHours[j]
+            h2 = allHours[j+1]
+
+            lines.append(get_line(h0, h1, h2))
+
+    return lines
+
+def get_spline(intercepts):
+    """Create a spline with list of best fit line intercepts.
+
+    Parameters
+    ----------
+        intercepts :
+
+    """
+    x = intercepts['x-intercepts']
+    y = intercepts['y-intercepts']
+
+    # print "X's", x
+    # print "Y's", y
+    print len(x)
+    print len(y)
+
+    times = []
+
+    for time in x:
+        times.append(datetime.datetime.utcfromtimestamp(time))
+
+    return
 
 def get_traces(trace, interval='hours'):
     """Use array of times to slice up trace and collect statistics.
@@ -424,7 +434,7 @@ def get_traces(trace, interval='hours'):
             'hours', 'days', 'months' are accepted
     Returns
     -------
-        array-like list of traces with statistics
+        array-like list of traces with statistics.
     """
     traces = []
 
@@ -648,53 +658,6 @@ def plot_dist_subplot(fig, months, plotCount, title,
     upper = mean + 2.0*stddev
     plot.fill_between(times1, lower, upper, facecolor='yellow', alpha=0.08)
 
-def plot_spline(intercepts, lines):
-    """Create a spline with list of best fit line intercepts.
-    """
-    x = intercepts['x-intercepts']
-    y = intercepts['y-intercepts']
-
-    print len(x), "pts", len(x) / 24, "days"
-    print len(y), "pts", len(y) / 24, "days"
-
-    times = []
-    count = 1
-    for time in x:
-        times.append(datetime.datetime.utcfromtimestamp(time))
-        count += 1
-
-    fig = plot.figure('MHV linear fit intercepts.')
-
-    # TODO - use the entire range, instead of just the first 24 points
-    plot.plot(times[0:24], y[0:24], color='blue', marker='+', label='Intercepts')
-
-    lineX = []
-    lineY = []
-    slopes = []
-    intercepts = []
-    for line in lines:
-        lineX.append(datetime.datetime.utcfromtimestamp(line['x']))
-        lineY.append(line['y'])
-        slopes.append(line['slope'])
-        intercepts.append(line['intercept'])
-    print len(lineX), "pts", len(lineX) / 24, "days"
-    print len(lineY), "pts", len(lineY) / 24, "days"
-    # TODO - use the entire range, instead of just the first 24 points
-    plot.plot(lineX[0:24], lineY[0:24], color='green', label='Line X,Y')
-
-    # TODO - use the entire range, instead of just the first 24 points
-    plot_lines(slopes[0:24], intercepts[0:24], x[0:24], y[0:24])
-    # slope, intercept = np.polyfit(slopes[0], intercepts[0], 1)
-    # plot.plot(slopes[0], slopes[0]*slope + intercept, 'r')
-
-
-    plot.legend(loc='best', numpoints=1, frameon=False)
-    mng = plot.get_current_fig_manager()
-    mng.window.showMaximized()
-    plot.tight_layout()
-    plot.show()
-    return
-
 def plot_lines(m, b, x, y):
     print "X's", len(x), ":", x
     print "Y's", len(y), ":", y
@@ -722,7 +685,6 @@ def plot_lines(m, b, x, y):
 
     # plot.plot(times, equations, 'r', label="Lines")
 
-
 def plot_months(months):
     """Plot monthly statistics before and after cleaning.
 
@@ -741,68 +703,6 @@ def plot_months(months):
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
     plot.show()
-
-def plot_subplot(fig, num, title, timeList, rLabel, mLabel,
-                color='b', marker='s'):
-    """Helper method for making subplots.
-
-    Parameters
-    ----------
-        fig : magplotlib.figure.Figure
-            Instance of plot.figure to attach the subplot to
-        num : Integer
-            Subplot rows, columns and position
-        title : String
-            Subplot title
-        timeList :
-            Array of times and stats to use for plot
-        rLabel : String
-            Range label
-        mLabel : String
-            Mean label
-        color : String with valid marker color
-            Marker color
-        marker : String with valid marker string
-            Marker style/shape
-    """
-    means = []
-    times = []
-    ranges = []
-
-    subplot = fig.add_subplot(num)
-    subplot.set_title(title)
-    subplot.xaxis.set_major_formatter(DateFormatter('%b %y'))
-    fig.autofmt_xdate(rotation=45)
-
-    for time in timeList:
-        times.append(time.stats.starttime)
-        means.append(time.stats.statistics['average'])
-        ranges.append(time.stats.statistics['maximum']
-                - time.stats.statistics['minimum'])
-    times = date2num(times)
-
-    plot.errorbar(times, means, ranges, color='cyan', label=rLabel)
-    plot.plot(times, means, color=color, marker=marker, label=mLabel)
-
-    pts = 0
-    for mean in means:
-        if not np.isnan(mean):
-            pts += 1
-    plot.legend(loc='best', numpoints=1, frameon=False, title=str(pts)+" pts")
-
-    mean = np.nanmean(means)
-    plot.plot([times[0], times[len(times)-1]],[mean, mean], lw=1, label='mean')
-
-    stddev = np.nanmax(means) - np.nanmin(means)
-    lower = mean - 0.5*stddev
-    upper = mean + 0.5*stddev
-    plot.fill_between(times, lower, upper, facecolor='red', alpha=0.05)
-    lower = mean - 1.0*stddev
-    upper = mean + 1.0*stddev
-    plot.fill_between(times, lower, upper, facecolor='orange', alpha=0.1)
-    lower = mean - 2.0*stddev
-    upper = mean + 2.0*stddev
-    plot.fill_between(times, lower, upper, facecolor='yellow', alpha=0.1)
 
 def plot_ranges(time1, time2, title1='', title2=''):
     """Plot hourly statistics before and after cleaning.
@@ -928,6 +828,115 @@ def plot_ranges_helper(fig, title1, title2, list1, list2,
     lower = mean - 1.0*stddev
     upper = mean + 1.0*stddev
     plot.fill_between(times1, lower, upper, facecolor='orange', alpha=0.06)
+
+def plot_spline(intercepts, lines):
+    """Create a spline with list of best fit line intercepts.
+    """
+    x = intercepts['x-intercepts']
+    y = intercepts['y-intercepts']
+
+    print len(x), "pts", len(x) / 24, "days"
+    print len(y), "pts", len(y) / 24, "days"
+
+    times = []
+    count = 1
+    for time in x:
+        times.append(datetime.datetime.utcfromtimestamp(time))
+        count += 1
+
+    fig = plot.figure('MHV linear fit intercepts.')
+
+    # TODO - use the entire range, instead of just the first 24 points
+    plot.plot(times[0:24], y[0:24], color='blue', marker='+', label='Intercepts')
+
+    lineX = []
+    lineY = []
+    slopes = []
+    intercepts = []
+    for line in lines:
+        lineX.append(datetime.datetime.utcfromtimestamp(line['x']))
+        lineY.append(line['y'])
+        slopes.append(line['slope'])
+        intercepts.append(line['intercept'])
+    print len(lineX), "pts", len(lineX) / 24, "days"
+    print len(lineY), "pts", len(lineY) / 24, "days"
+    # TODO - use the entire range, instead of just the first 24 points
+    plot.plot(lineX[0:24], lineY[0:24], color='green', label='Line X,Y')
+
+    # TODO - use the entire range, instead of just the first 24 points
+    plot_lines(slopes[0:24], intercepts[0:24], x[0:24], y[0:24])
+    # slope, intercept = np.polyfit(slopes[0], intercepts[0], 1)
+    # plot.plot(slopes[0], slopes[0]*slope + intercept, 'r')
+
+
+    plot.legend(loc='best', numpoints=1, frameon=False)
+    mng = plot.get_current_fig_manager()
+    mng.window.showMaximized()
+    plot.tight_layout()
+    plot.show()
+    return
+
+def plot_subplot(fig, num, title, timeList, rLabel, mLabel,
+                color='b', marker='s'):
+    """Helper method for making subplots.
+
+    Parameters
+    ----------
+        fig : magplotlib.figure.Figure
+            Instance of plot.figure to attach the subplot to
+        num : Integer
+            Subplot rows, columns and position
+        title : String
+            Subplot title
+        timeList :
+            Array of times and stats to use for plot
+        rLabel : String
+            Range label
+        mLabel : String
+            Mean label
+        color : String with valid marker color
+            Marker color
+        marker : String with valid marker string
+            Marker style/shape
+    """
+    means = []
+    times = []
+    ranges = []
+
+    subplot = fig.add_subplot(num)
+    subplot.set_title(title)
+    subplot.xaxis.set_major_formatter(DateFormatter('%b %y'))
+    fig.autofmt_xdate(rotation=45)
+
+    for time in timeList:
+        times.append(time.stats.starttime)
+        means.append(time.stats.statistics['average'])
+        ranges.append(time.stats.statistics['maximum']
+                - time.stats.statistics['minimum'])
+    times = date2num(times)
+
+    plot.errorbar(times, means, ranges, color='cyan', label=rLabel)
+    plot.plot(times, means, color=color, marker=marker, label=mLabel)
+
+    pts = 0
+    for mean in means:
+        if not np.isnan(mean):
+            pts += 1
+    plot.legend(loc='best', numpoints=1, frameon=False, title=str(pts)+" pts")
+
+    mean = np.nanmean(means)
+    plot.plot([times[0], times[len(times)-1]],[mean, mean], lw=1, label='mean')
+
+    stddev = np.nanmax(means) - np.nanmin(means)
+    lower = mean - 0.5*stddev
+    upper = mean + 0.5*stddev
+    plot.fill_between(times, lower, upper, facecolor='red', alpha=0.05)
+    lower = mean - 1.0*stddev
+    upper = mean + 1.0*stddev
+    plot.fill_between(times, lower, upper, facecolor='orange', alpha=0.1)
+    lower = mean - 2.0*stddev
+    upper = mean + 2.0*stddev
+    plot.fill_between(times, lower, upper, facecolor='yellow', alpha=0.1)
 
 def print_all(stats):
     """Print statistics for the entire trace to the terminal.
