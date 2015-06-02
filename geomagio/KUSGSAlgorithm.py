@@ -72,12 +72,14 @@ class KUSGSAlgorithm(Algorithm):
 
         # Get least square linear fit of sliding window over 3 MHVs at a time.
         lines = get_lines(months)
-        plot_lines(lines)
+        # plot_lines(lines, 0, 0)
 
         # Get list of intercepts of all consecutive lines.
         intercepts = get_intercepts(lines)
+        plot_lines(lines, 0, 0)
+        plot_intercepts(intercepts, 0, 0)
 
-        plot_spline(intercepts, lines)
+        # plot_spline(intercepts, lines)
         # get_spline(intercepts, lines)
 
         # Create Solar Regular curve
@@ -292,7 +294,6 @@ def get_intercepts(lines):
     -------
         List of intercept objects with 'x' and 'y' defined.
     """
-    # intercepts = []
     xIntercepts = []
     yIntercepts = []
 
@@ -304,17 +305,17 @@ def get_intercepts(lines):
         m1 = line1['slope']
 
         if ((m0 - m1) == 0):
-            # Same slope, no intercept
-            # Using the original point
-            # intercepts.append({'x': line1['x'], 'y': line1['y']})
-            # print "Same Slope:", line1['x'], line1['y'], i
+            # Same slope, no intercept. Using the original point.
+            # print "Same Slope - x:", line1['x'], "y:", line1['y'], "i:", i
             xIntercepts.append(line1['x'])
             yIntercepts.append(line1['y'])
 
         elif (m0 == 0 or m1 == 0):
-            # one of them is horizontal
-            xIntercepts.append(line1['x'])
-            yIntercepts.append(line1['y'])
+            # One of the lines is horizontal
+            # Do we need to catch this? They should still intercept...
+            # xIntercepts.append(line1['x'])
+            # yIntercepts.append(line1['y'])
+            pass
 
         else:
             b0 = line0['intercept']
@@ -329,11 +330,9 @@ def get_intercepts(lines):
 
             if i == 189:
                 print "Different Slope:", x, y, i
-            # intercepts.append({'x': x, 'y': y})
             xIntercepts.append(x)
             yIntercepts.append(y)
 
-    # return intercepts
     return {'x-intercepts': xIntercepts, 'y-intercepts': yIntercepts}
 
 def get_line(h0, h1, h2):
@@ -661,14 +660,61 @@ def plot_dist_subplot(fig, months, plotCount, title,
     upper = mean + 2.0*stddev
     plot.fill_between(times1, lower, upper, facecolor='yellow', alpha=0.08)
 
-def plot_lines(lines):
+def plot_intercepts(intercepts, begin=0, cap=0):
+    xIntercepts = intercepts['x-intercepts']
+    yIntercepts = intercepts['y-intercepts']
+
+    if cap == 0:
+        cap = len(xIntercepts)
+
+    x = xIntercepts[begin:cap]
+    i = 0
+    for value in x:
+        x[i] = datetime.datetime.fromtimestamp(value)
+        i += 1
+    y = yIntercepts[begin:cap]
+
+    fig = plot.figure('Intercepts')
+    # subplot = fig.add_subplot(111)
+    # subplot.set_title('Intercepts of line segments')
+    # subplot.xaxis.set_major_formatter(DateFormatter('%B %d, %Y'))
+    # subplot.xaxis.set_major_locator(DayLocator([5,15,25]))
+    plot_intercepts_helper1(fig)
+
+    plot.scatter(x, y, s=12, marker='D', color='green')
+    plot.plot(x, y, label="Intercepts")
+
+    # pts = str(cap-begin) + " pts"
+    # plot.legend(loc='best', title=pts)
+    # mng = plot.get_current_fig_manager()
+    # mng.window.showMaximized()
+    # plot.tight_layout()
+    # plot.show()
+    plot_intercepts_helper2(cap-begin)
+
+def plot_intercepts_helper1(fig):
+    subplot = fig.add_subplot(111)
+    subplot.set_title('Intercepts of line segments')
+    subplot.xaxis.set_major_formatter(DateFormatter('%B %d, %Y'))
+    subplot.xaxis.set_major_locator(DayLocator([5,15,25]))
+
+def plot_intercepts_helper2(points):
+    pts = str(points) + " pts"
+    plot.legend(loc='best', title=pts)
+    mng = plot.get_current_fig_manager()
+    mng.window.showMaximized()
+    plot.tight_layout()
+    plot.show()
+
+def plot_lines(lines, begin=0, cap=0):
     x = []
     y = []
     y2 = []
 
     count = 0
-    begin = 0
-    cap = 10000
+    if cap == 0:
+        cap = len(lines)
+
     for line in lines:
         localX = line['x']
         localY = line['y']
@@ -686,11 +732,22 @@ def plot_lines(lines):
         if count > cap:
             break
 
-    fig, ax = plot.subplots()
-    ax.set_color_cycle(['red', 'orange', 'yellow'])
+    # i = 0
+    # for value in x:
+    #     x[i] = datetime.datetime.fromtimestamp(value)
+    #     i += 1
 
+    fig = plot.figure('Line segments')
+    subplot = fig.add_subplot(111)
+    subplot.set_color_cycle(['red', 'orange', 'yellow'])
+    subplot.set_title('Line segments from 3 consecutive MHVs')
+    # subplot.xaxis.set_major_formatter(DateFormatter('%B %d, %Y'))
+    # subplot.xaxis.set_major_locator(DayLocator([5,15,25]))
+
+    plot.scatter(x, y, s=8, marker='o', color='blue')
     plot.plot(x, y, label="x & y", color='blue')
     plot.plot(x, y2, label="x & y = mx + b", color='green')
+    plot.scatter(x, y2, s=30, marker='h', color='green')
 
     count = 0
     for line in lines:
@@ -704,7 +761,7 @@ def plot_lines(lines):
             xDiff = localX - prevX
             yDiff = localY2 - prevY
             plot.plot([prevX-xDiff, localX, localX+xDiff],
-                    [prevY-yDiff, localY2, localY2+yDiff])
+                    [prevY-yDiff, localY2, localY2+yDiff], lw=2)
 
         prevX = localX
         prevY = localY2
