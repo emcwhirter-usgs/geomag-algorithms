@@ -76,8 +76,8 @@ class KUSGSAlgorithm(Algorithm):
 
         # Get list of intercepts of all consecutive lines.
         intercepts = get_intercepts(lines)
-        plot_lines(lines, 0, 0)
-        plot_intercepts(intercepts, 0, 0)
+        plot_lines(lines, 0, 50)
+        plot_intercepts(intercepts, 0, 50)
 
         # plot_spline(intercepts, lines)
         # get_spline(intercepts, lines)
@@ -660,6 +660,26 @@ def plot_dist_subplot(fig, months, plotCount, title,
     upper = mean + 2.0*stddev
     plot.fill_between(times1, lower, upper, facecolor='yellow', alpha=0.08)
 
+def plot_finalize(points):
+    pts = str(points) + " pts"
+    plot.legend(loc='best', title=pts)
+
+    mng = plot.get_current_fig_manager()
+    mng.window.showMaximized()
+
+    plot.tight_layout()
+    plot.show()
+
+def plot_initialize(fig, title, set_colors=False):
+    subplot = fig.add_subplot(111)
+    subplot.set_title(title)
+
+    if set_colors:
+        subplot.set_color_cycle(['red', 'orange', 'yellow'])
+
+    subplot.xaxis.set_major_formatter(DateFormatter('%B %d, %Y'))
+    subplot.xaxis.set_major_locator(DayLocator([5,15,25]))
+
 def plot_intercepts(intercepts, begin=0, cap=0):
     xIntercepts = intercepts['x-intercepts']
     yIntercepts = intercepts['y-intercepts']
@@ -675,36 +695,12 @@ def plot_intercepts(intercepts, begin=0, cap=0):
     y = yIntercepts[begin:cap]
 
     fig = plot.figure('Intercepts')
-    # subplot = fig.add_subplot(111)
-    # subplot.set_title('Intercepts of line segments')
-    # subplot.xaxis.set_major_formatter(DateFormatter('%B %d, %Y'))
-    # subplot.xaxis.set_major_locator(DayLocator([5,15,25]))
-    plot_intercepts_helper1(fig)
+    plot_initialize(fig, 'Intercepts of line segments')
 
     plot.scatter(x, y, s=12, marker='D', color='green')
     plot.plot(x, y, label="Intercepts")
 
-    # pts = str(cap-begin) + " pts"
-    # plot.legend(loc='best', title=pts)
-    # mng = plot.get_current_fig_manager()
-    # mng.window.showMaximized()
-    # plot.tight_layout()
-    # plot.show()
-    plot_intercepts_helper2(cap-begin)
-
-def plot_intercepts_helper1(fig):
-    subplot = fig.add_subplot(111)
-    subplot.set_title('Intercepts of line segments')
-    subplot.xaxis.set_major_formatter(DateFormatter('%B %d, %Y'))
-    subplot.xaxis.set_major_locator(DayLocator([5,15,25]))
-
-def plot_intercepts_helper2(points):
-    pts = str(points) + " pts"
-    plot.legend(loc='best', title=pts)
-    mng = plot.get_current_fig_manager()
-    mng.window.showMaximized()
-    plot.tight_layout()
-    plot.show()
+    plot_finalize(cap-begin)
 
 def plot_lines(lines, begin=0, cap=0):
     x = []
@@ -738,11 +734,7 @@ def plot_lines(lines, begin=0, cap=0):
     #     i += 1
 
     fig = plot.figure('Line segments')
-    subplot = fig.add_subplot(111)
-    subplot.set_color_cycle(['red', 'orange', 'yellow'])
-    subplot.set_title('Line segments from 3 consecutive MHVs')
-    # subplot.xaxis.set_major_formatter(DateFormatter('%B %d, %Y'))
-    # subplot.xaxis.set_major_locator(DayLocator([5,15,25]))
+    plot_initialize(fig, 'Line segments from 3 consecutive MHVs', True)
 
     plot.scatter(x, y, s=8, marker='o', color='blue')
     plot.plot(x, y, label="x & y", color='blue')
@@ -770,12 +762,7 @@ def plot_lines(lines, begin=0, cap=0):
         if count > cap:
             break
 
-    pts = str(count-begin-1) + " pts"
-    plot.legend(loc='best', title=pts)
-    mng = plot.get_current_fig_manager()
-    mng.window.showMaximized()
-    plot.tight_layout()
-    plot.show()
+    plot_finalize(count-begin-1)
 
 def plot_lines_2(m, b, x, y):
     # print "X's", len(x), ":", x
