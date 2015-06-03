@@ -76,8 +76,8 @@ class KUSGSAlgorithm(Algorithm):
 
         # Get list of intercepts of all consecutive lines.
         intercepts = get_intercepts(lines)
-        plot_lines(lines, 0, 50)
-        plot_intercepts(intercepts, 0, 50)
+        # plot_lines(lines, 0, 0)
+        plot_intercepts(intercepts, 0, 0)
 
         # plot_spline(intercepts, lines)
         # get_spline(intercepts, lines)
@@ -303,33 +303,23 @@ def get_intercepts(lines):
 
         m0 = line0['slope']
         m1 = line1['slope']
+        b0 = line0['intercept']
+        b1 = line1['intercept']
 
         if ((m0 - m1) == 0):
             # Same slope, no intercept. Using the original point.
-            # print "Same Slope - x:", line1['x'], "y:", line1['y'], "i:", i
             xIntercepts.append(line1['x'])
             yIntercepts.append(line1['y'])
 
-        elif (m0 == 0 or m1 == 0):
-            # One of the lines is horizontal
-            # Do we need to catch this? They should still intercept...
-            # xIntercepts.append(line1['x'])
-            # yIntercepts.append(line1['y'])
-            pass
+        if ((m0 - m1)) < 0.001:
+            # Slopes are very close. Using the original point.
+            xIntercepts.append(line1['x'])
+            yIntercepts.append(line1['y'])
 
         else:
-            b0 = line0['intercept']
-            b1 = line1['intercept']
-
-            if i == 189:
-                print m0, m1
-                print b0, b1
-
             x = (b1 - b0) / (m0 - m1)
             y = m0 * x + b0
 
-            if i == 189:
-                print "Different Slope:", x, y, i
             xIntercepts.append(x)
             yIntercepts.append(y)
 
@@ -410,11 +400,6 @@ def get_spline(intercepts):
     """
     x = intercepts['x-intercepts']
     y = intercepts['y-intercepts']
-
-    # print "X's", x
-    # print "Y's", y
-    # print len(x)
-    # print len(y)
 
     times = []
 
@@ -720,6 +705,7 @@ def plot_lines(lines, begin=0, cap=0):
         localY2 = m * localX + b
 
         if count >= begin:
+            localX = datetime.datetime.fromtimestamp(localX)
             x.append(localX)
             y.append(localY)
             y2.append(localY2)
@@ -727,11 +713,6 @@ def plot_lines(lines, begin=0, cap=0):
         count += 1
         if count > cap:
             break
-
-    # i = 0
-    # for value in x:
-    #     x[i] = datetime.datetime.fromtimestamp(value)
-    #     i += 1
 
     fig = plot.figure('Line segments')
     plot_initialize(fig, 'Line segments from 3 consecutive MHVs', True)
@@ -749,6 +730,7 @@ def plot_lines(lines, begin=0, cap=0):
         b = line['intercept']
         localY2 = m * localX + b
 
+        localX = datetime.datetime.fromtimestamp(localX)
         if count > 0 and count >= begin:
             xDiff = localX - prevX
             yDiff = localY2 - prevY
