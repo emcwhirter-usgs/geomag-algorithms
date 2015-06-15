@@ -77,13 +77,12 @@ class KUSGSAlgorithm(Algorithm):
         # Get list of intercepts of all consecutive lines.
         intercepts = get_intercepts(lines)
         # plot_lines(lines, 0, 0)
-        plot_intercepts(intercepts, 0, 0)
+        # plot_intercepts(intercepts, 0, 0)
 
-        # plot_spline(intercepts, lines)
-        # get_spline(intercepts, lines)
-
-        # Create Solar Regular curve
         # TODO Next step is to implement the SR curve
+        get_spline(intercepts)
+        # plot_spline(intercepts, lines)
+        # Create Solar Regular curve
         # create_sr_curve(mhvs)
 
         out_stream = timeseries
@@ -316,6 +315,12 @@ def get_intercepts(lines):
             xIntercepts.append(line1['x'])
             yIntercepts.append(line1['y'])
 
+        if ((m0 - m1)) < 0.01:
+            # Slopes are very close. Using the original point.
+            # It looks like there are points not caught by 0.001
+            xIntercepts.append(line1['x'])
+            yIntercepts.append(line1['y'])
+
         else:
             x = (b1 - b0) / (m0 - m1)
             y = m0 * x + b0
@@ -339,7 +344,7 @@ def get_line(h0, h1, h2):
 
     Returns
     -------
-        Object with properties 'slope' and 'intercept' defined.
+        Object with properties 'slope', 'intercept', 'x' and 'y' defined.
     """
     x0 = h0.stats.starttime.timestamp
     x1 = h1.stats.starttime.timestamp
@@ -391,20 +396,50 @@ def get_lines(months):
     return lines
 
 def get_spline(intercepts):
-    """Create a spline with list of best fit line intercepts.
+    """Create a cubic spline with list of consecutive best fit line intercepts.
 
     Parameters
     ----------
-        intercepts :
+        intercepts : dictionary
+            An object with 2 lists containing x and y-intercepts.
+
+    Returns
+    -------
 
     """
     x = intercepts['x-intercepts']
+    x = x[:48]
     y = intercepts['y-intercepts']
+    y = y[:48]
+    # plot_intercepts(intercepts, 0, 0)
+
+    if len(x) != len(y):
+        raise Exception('X and Y intercept lists must be the same length.')
+
+    xLast = -1
+    for value in x:
+        if value < xLast:
+            raise Exception('X values must be consecutive (in order).')
+        xLast = value
+
+    f = interpolate.interp1d(x, y, kind='cubic')
+
+    # xnew = np.linspace(x[0], x[len(x)-1], 90000)
+    # xnew = np.linspace(x[0], x[len(x)-1], 60*len(x))
+    xnew = np.linspace(x[0], x[len(x)-1], 1440*len(x))
 
     times = []
-
     for time in x:
         times.append(datetime.datetime.utcfromtimestamp(time))
+    times2 = []
+    for time in xnew:
+        times2.append(datetime.datetime.utcfromtimestamp(time))
+
+    # plot.plot(x, y, 'o', xnew, f(xnew), '--')
+    plot.plot(times, y, 'o')
+    # plot.plot(times2, f(xnew), '--')
+    plot.legend(['Data', 'Cubic'], loc='best')
+    plot.show()
 
     return
 
