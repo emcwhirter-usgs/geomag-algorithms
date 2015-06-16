@@ -83,7 +83,6 @@ class KUSGSAlgorithm(Algorithm):
         get_spline(intercepts)
         # plot_spline(intercepts, lines)
         # Create Solar Regular curve
-        # create_sr_curve(mhvs)
 
         out_stream = timeseries
 
@@ -251,35 +250,6 @@ def clean_range(hour, maxRange):
 
     return hour
 
-def create_sr_curve(mhvs):
-    print "SR stuff"
-
-    means = []
-    times = []
-    for hour in mhvs:
-        means.append(hour.stats.statistics['average'])
-        times.append(hour.stats.starttime)
-        # times.append(hour.stats.starttime.timestamp)
-    print "Got means"
-    # f1 = interpolate.interp1d(times, means)
-    # print f1
-    tck = interpolate.splrep(times, means, s=0)
-    print tck
-    print "Length:", len(tck)
-    print tck[0]
-    print "INTERPOLATED 1"
-    xnew = np.arange(0,2*np.pi,np.pi/50)
-    ynew = interpolate.splev(xnew, tck, der=0)
-    print "INTERPOLATED 2"
-    # plot.plot(times, means, 'x', xnew, ynew, xnew, xnew, 'b')
-    plot.plot(times, means, 'x', times, means, 'b')
-    plot.plot(times, tck)
-    # plot.plot(times, means, 'x')
-    plot.show()
-
-    # f = interpolate.interp1d(times, means, kind='cubic')
-    # print f1
-
 def get_intercepts(lines):
     """Find intercepts of consecutive straight lines.
 
@@ -310,14 +280,20 @@ def get_intercepts(lines):
             xIntercepts.append(line1['x'])
             yIntercepts.append(line1['y'])
 
-        if ((m0 - m1)) < 0.001:
+        elif ((m0 - m1)) < 0.001:
             # Slopes are very close. Using the original point.
             xIntercepts.append(line1['x'])
             yIntercepts.append(line1['y'])
 
-        if ((m0 - m1)) < 0.01:
+        elif ((m0 - m1)) < 0.01:
             # Slopes are very close. Using the original point.
             # It looks like there are points not caught by 0.001
+            xIntercepts.append(line1['x'])
+            yIntercepts.append(line1['y'])
+
+        elif ((m0 - m1)) < 1:
+            # Slopes are very close. Using the original point.
+            # It looks like there are points not caught by 0.01
             xIntercepts.append(line1['x'])
             yIntercepts.append(line1['y'])
 
@@ -402,14 +378,18 @@ def get_spline(intercepts):
     ----------
         intercepts : dictionary
             An object with 2 lists containing x and y-intercepts.
+            x values are seconds since epoch.
+            y values are nanoTeslas (nT)
 
     Returns
     -------
-
+        Object with 'x' and 'y' defined as lists.
     """
     x = intercepts['x-intercepts']
+    # x = x[725:750]
     x = x[:48]
     y = intercepts['y-intercepts']
+    # y = y[725:750]
     y = y[:48]
     # plot_intercepts(intercepts, 0, 0)
 
@@ -419,29 +399,28 @@ def get_spline(intercepts):
     xLast = -1
     for value in x:
         if value < xLast:
-            raise Exception('X values must be consecutive (in order).')
+            raise Exception('X (time) values must be consecutive (in order).')
         xLast = value
 
     f = interpolate.interp1d(x, y, kind='cubic')
 
-    # xnew = np.linspace(x[0], x[len(x)-1], 90000)
-    # xnew = np.linspace(x[0], x[len(x)-1], 60*len(x))
-    xnew = np.linspace(x[0], x[len(x)-1], 1440*len(x))
+    xnew = np.linspace(x[0], x[len(x)-1], 60*len(x))
+    ynew = f(xnew)
 
     times = []
     for time in x:
         times.append(datetime.datetime.utcfromtimestamp(time))
+        # print "T:", time
     times2 = []
     for time in xnew:
         times2.append(datetime.datetime.utcfromtimestamp(time))
 
-    # plot.plot(x, y, 'o', xnew, f(xnew), '--')
     plot.plot(times, y, 'o')
-    # plot.plot(times2, f(xnew), '--')
+    plot.plot(times2, ynew, '--')
     plot.legend(['Data', 'Cubic'], loc='best')
     plot.show()
 
-    return
+    return {'x': xnew, 'y': ynew}
 
 def get_traces(trace, interval='hours'):
     """Use array of times to slice up trace and collect statistics.
