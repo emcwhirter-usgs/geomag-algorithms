@@ -274,28 +274,35 @@ def get_intercepts(lines):
         m1 = line1['slope']
         b0 = line0['intercept']
         b1 = line1['intercept']
+        # if i > 744 and i < 746:
+        #     print i-1, "line0", line0
+        #     print i, "line1", line1, "\n"
 
         if ((m0 - m1) == 0):
             # Same slope, no intercept. Using the original point.
-            xIntercepts.append(line1['x'])
-            yIntercepts.append(line1['y'])
+            # Don't add the point if is the same as the last though.
+            x0 = line0['x']
+            x1 = line1['x']
+            if ((b0 - b1) > 0.00001) or ((x0 - x1) > 0.00001):
+                xIntercepts.append(line1['x'])
+                yIntercepts.append(line1['y'])
 
-        elif ((m0 - m1)) < 0.001:
-            # Slopes are very close. Using the original point.
-            xIntercepts.append(line1['x'])
-            yIntercepts.append(line1['y'])
+        # elif ((m0 - m1)) < 0.001:
+        #     # Slopes are very close. Using the original point.
+        #     xIntercepts.append(line1['x'])
+        #     yIntercepts.append(line1['y'])
 
-        elif ((m0 - m1)) < 0.01:
+        elif (m0 - m1) < 0.01:
             # Slopes are very close. Using the original point.
             # It looks like there are points not caught by 0.001
             xIntercepts.append(line1['x'])
             yIntercepts.append(line1['y'])
 
-        elif ((m0 - m1)) < 1:
-            # Slopes are very close. Using the original point.
-            # It looks like there are points not caught by 0.01
-            xIntercepts.append(line1['x'])
-            yIntercepts.append(line1['y'])
+        # elif ((m0 - m1)) < 1:
+        #     # Slopes are very close. Using the original point.
+        #     # It looks like there are points not caught by 0.01
+        #     xIntercepts.append(line1['x'])
+        #     yIntercepts.append(line1['y'])
 
         else:
             x = (b1 - b0) / (m0 - m1)
@@ -387,10 +394,12 @@ def get_spline(intercepts):
     """
     x = intercepts['x-intercepts']
     # x = x[725:750]
-    x = x[:48]
+    # x = x[740:745]
+    # x = x[:48]
     y = intercepts['y-intercepts']
     # y = y[725:750]
-    y = y[:48]
+    # y = y[740:745]
+    # y = y[:48]
     # plot_intercepts(intercepts, 0, 0)
 
     if len(x) != len(y):
@@ -414,6 +423,16 @@ def get_spline(intercepts):
     times2 = []
     for time in xnew:
         times2.append(datetime.datetime.utcfromtimestamp(time))
+
+    lastX = 0
+    i = 0
+    for value in x:
+        diff = value - lastX
+        if diff == 0:
+            print lastX, "-", datetime.datetime.utcfromtimestamp(lastX), "-", y[i-1], "i=", i-1+725
+            print value, "-", datetime.datetime.utcfromtimestamp(value), "-", y[i], "i=", i+725
+        lastX = value
+        i += 1
 
     plot.plot(times, y, 'o')
     plot.plot(times2, ynew, '--')
