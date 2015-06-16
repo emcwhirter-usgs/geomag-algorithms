@@ -49,13 +49,6 @@ class KUSGSAlgorithm(Algorithm):
 
     def process(self, timeseries):
         """Process the data to calculate K-USGS indices.
-        SR-Curve (Solar Regular Curve) uses 24 Mean Hourly Values (MHVs) for 1
-        entire calendar day, plus the last 2 MHVs from the previous day and the
-        first 2 MHVs from the following day. Thus the data is cleaned in daily
-        chuncks using 28 MHVs. MHVs are excluded if they contain minute
-        values that have a large range, or they fall in the tails of the
-        monthly MHV distribution. MHVs that are excluded or don't exist
-        are replaced with a daily or monthly mean.
 
         Parameters
         ----------
@@ -67,21 +60,9 @@ class KUSGSAlgorithm(Algorithm):
             self.rangeLimit : Float
                 Standard deviation limit to use for eliminating based on ranges.
         """
-        # Clean up the data and make it continuous.
-        months = clean_mhvs(timeseries, self.rangeLimit, self.distLimit)
-
-        # Get least square linear fit of sliding window over 3 MHVs at a time.
-        lines = get_lines(months)
-        # plot_lines(lines, 0, 0)
-
-        # Get list of intercepts of all consecutive lines.
-        intercepts = get_intercepts(lines)
-        # plot_lines(lines, 0, 0)
-        # plot_intercepts(intercepts, 0, 0)
-
-        # TODO Next step is to implement the SR curve
-        spline = get_spline(intercepts)
-        # Create Solar Regular curve
+        # TODO - Do all of the below with E in addition to H
+        kVariation = get_k_variation('H', timeseries, self.rangeLimit, self.distLimit)
+        # months = get_k_variation('D', timeseries, self.rangeLimit, self.distLimit)
 
         out_stream = timeseries
 
@@ -123,7 +104,7 @@ def clean_distribution(hour, minimum, maximum, monthAverage):
 
     return hour
 
-def clean_mhvs(timeseries, rangeLimit, distributionLimit):
+def clean_mhvs(channel, timeseries, rangeLimit, distributionLimit):
     """MHVs are excluded if they contain minute values that have a large range,
     defined by rangeLimit or they fall in the tails of the monthly MHV
     distribution, defined by distributionLimit. MHVs that are excluded or
@@ -144,7 +125,7 @@ def clean_mhvs(timeseries, rangeLimit, distributionLimit):
         List containing months with complete set of clean MHVs for the month
         attached as month.hours.
     """
-    trace = timeseries.select(channel='H')[0]
+    trace = timeseries.select(channel=channel)[0]
     trace.stats.statistics = statistics(trace.data)
 
     # This algorithm operates on entire calendar days of 1-Minute values.
@@ -296,7 +277,78 @@ def get_intercepts(lines):
             xIntercepts.append(x)
             yIntercepts.append(y)
 
+    # plot_lines(lines, 0, 0)
+    # plot_intercepts(xIntercepts, yIntercepts, 0, 0)
     return {'x-intercepts': xIntercepts, 'y-intercepts': yIntercepts}
+
+def get_k_variation(channel, timeseries, rangeLimit, distLimit):
+    """SR-Curve (Solar Regular Curve) uses 24 Mean Hourly Values (MHVs) for 1
+    entire calendar day, plus the last 2 MHVs from the previous day and the
+    first 2 MHVs from the following day. Thus the data is cleaned in daily
+    chuncks using 28 MHVs. MHVs are excluded if they contain minute
+    values that have a large range, or they fall in the tails of the
+    monthly MHV distribution. MHVs that are excluded or don't exist
+    are replaced with a daily or monthly mean.
+
+    Parameters
+    ----------
+        channel: String
+            H or D to specify which data channel to use.
+        self.distLimit : Float
+            Standard deviation limit to use for eliminating based on
+            distribution.
+        timeseries : obspy.core.Stream
+            Stream object containing input data.
+        self.rangeLimit : Float
+            Standard deviation limit to use for eliminating based on ranges.
+    """
+    # Clean up the data and make it continuous.
+    months = clean_mhvs(channel, timeseries, rangeLimit, distLimit)
+
+    # Get least square linear fit of sliding window over 3 MHVs at a time.
+    lines = get_lines(months)
+
+    # Get list of intercepts of all consecutive lines.
+    intercepts = get_intercepts(lines)
+
+    # Create a cubic spline from the intercepts.
+    spline = get_spline(intercepts)
+
+    # TODO Subtract spline from the data
+    kVariation = remove_sr_curve(months, spline)
+    # TODO Translate
+
+    return kVariation
+
+def remove_sr_curve(months, spline):
+    """
+    Parameters
+    ----------
+
+    Returns
+    -------
+    """
+    print "Remove SR Curve"
+    # print spline
+    # TODO need to subtract SR curve from all MHVs.
+    x = spline['x']
+    y = spline['y']
+
+    times = []
+    for time in x:
+        times.append(datetime.datetime.utcfromtimestamp(time))
+
+    print "Times type: ", type(times[0])
+    for month in months:
+        # print month
+        print type(month.stats.starttime.timestamp)
+        for hour in month.hours:
+            avg = hour.stats.statistics['average']
+            # Subtract solar regular value
+            hour.stats.statistics['average'] = avg - 20000
+            # print hour.stats.statistics
+
+    return
 
 def get_line(h0, h1, h2):
     """Find least squares fit of straight line of 3 points.
@@ -361,6 +413,7 @@ def get_lines(months):
 
             lines.append(get_line(h0, h1, h2))
 
+    # plot_lines(lines, 0, 0)
     return lines
 
 def get_spline(intercepts):
@@ -394,7 +447,7 @@ def get_spline(intercepts):
     xnew = np.linspace(x[0], x[len(x)-1], 60*len(x))
     ynew = f(xnew)
 
-    plot_spline(x, y, xnew, ynew)
+    # plot_spline(x, y, xnew, ynew)
     return {'x': xnew, 'y': ynew}
 
 def get_traces(trace, interval='hours'):
@@ -654,10 +707,7 @@ def plot_initialize(fig, title, set_colors=False):
     subplot.xaxis.set_major_formatter(DateFormatter('%B %d, %Y'))
     subplot.xaxis.set_major_locator(DayLocator([5,15,25]))
 
-def plot_intercepts(intercepts, begin=0, cap=0):
-    xIntercepts = intercepts['x-intercepts']
-    yIntercepts = intercepts['y-intercepts']
-
+def plot_intercepts(xIntercepts, yIntercepts, begin=0, cap=0):
     if cap == 0:
         cap = len(xIntercepts)
 
