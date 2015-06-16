@@ -80,8 +80,7 @@ class KUSGSAlgorithm(Algorithm):
         # plot_intercepts(intercepts, 0, 0)
 
         # TODO Next step is to implement the SR curve
-        get_spline(intercepts)
-        # plot_spline(intercepts, lines)
+        spline = get_spline(intercepts)
         # Create Solar Regular curve
 
         out_stream = timeseries
@@ -274,35 +273,21 @@ def get_intercepts(lines):
         m1 = line1['slope']
         b0 = line0['intercept']
         b1 = line1['intercept']
-        # if i > 744 and i < 746:
-        #     print i-1, "line0", line0
-        #     print i, "line1", line1, "\n"
 
         if ((m0 - m1) == 0):
             # Same slope, no intercept. Using the original point.
-            # Don't add the point if is the same as the last though.
             x0 = line0['x']
             x1 = line1['x']
-            if ((b0 - b1) > 0.00001) or ((x0 - x1) > 0.00001):
+            # Don't add the point if is exactly the same as the last one.
+            if ((b0 - b1) != 0) and ((x0 - x1) != 0):
                 xIntercepts.append(line1['x'])
                 yIntercepts.append(line1['y'])
-
-        # elif ((m0 - m1)) < 0.001:
-        #     # Slopes are very close. Using the original point.
-        #     xIntercepts.append(line1['x'])
-        #     yIntercepts.append(line1['y'])
 
         elif (m0 - m1) < 0.01:
             # Slopes are very close. Using the original point.
             # It looks like there are points not caught by 0.001
             xIntercepts.append(line1['x'])
             yIntercepts.append(line1['y'])
-
-        # elif ((m0 - m1)) < 1:
-        #     # Slopes are very close. Using the original point.
-        #     # It looks like there are points not caught by 0.01
-        #     xIntercepts.append(line1['x'])
-        #     yIntercepts.append(line1['y'])
 
         else:
             x = (b1 - b0) / (m0 - m1)
@@ -393,14 +378,7 @@ def get_spline(intercepts):
         Object with 'x' and 'y' defined as lists.
     """
     x = intercepts['x-intercepts']
-    # x = x[725:750]
-    # x = x[740:745]
-    # x = x[:48]
     y = intercepts['y-intercepts']
-    # y = y[725:750]
-    # y = y[740:745]
-    # y = y[:48]
-    # plot_intercepts(intercepts, 0, 0)
 
     if len(x) != len(y):
         raise Exception('X and Y intercept lists must be the same length.')
@@ -416,29 +394,7 @@ def get_spline(intercepts):
     xnew = np.linspace(x[0], x[len(x)-1], 60*len(x))
     ynew = f(xnew)
 
-    times = []
-    for time in x:
-        times.append(datetime.datetime.utcfromtimestamp(time))
-        # print "T:", time
-    times2 = []
-    for time in xnew:
-        times2.append(datetime.datetime.utcfromtimestamp(time))
-
-    lastX = 0
-    i = 0
-    for value in x:
-        diff = value - lastX
-        if diff == 0:
-            print lastX, "-", datetime.datetime.utcfromtimestamp(lastX), "-", y[i-1], "i=", i-1+725
-            print value, "-", datetime.datetime.utcfromtimestamp(value), "-", y[i], "i=", i+725
-        lastX = value
-        i += 1
-
-    plot.plot(times, y, 'o')
-    plot.plot(times2, ynew, '--')
-    plot.legend(['Data', 'Cubic'], loc='best')
-    plot.show()
-
+    plot_spline(x, y, xnew, ynew)
     return {'x': xnew, 'y': ynew}
 
 def get_traces(trace, interval='hours'):
@@ -779,33 +735,6 @@ def plot_lines(lines, begin=0, cap=0):
 
     plot_finalize(count-begin-1)
 
-def plot_lines_2(m, b, x, y):
-    # print "X's", len(x), ":", x
-    # print "Y's", len(y), ":", y
-
-    # slope, intercept = np.polyfit(x, y, 1)
-    times = []
-    equations = []
-    count = 0
-    # for time in x:
-    #     equation = time*m[count] + b[count]
-    #     equations.append(equation)
-    #     times.append(datetime.datetime.utcfromtimestamp(time))
-    #     # plot.plot(times, equations, 'r', label="Lines")
-    #     plot.plot()
-    #     count += 1
-    for i in range(1, len(x)-1):
-        x0 = datetime.datetime.utcfromtimestamp(x[i-1])
-        x1 = datetime.datetime.utcfromtimestamp(x[i])
-        x2 = datetime.datetime.utcfromtimestamp(x[i+1])
-        y0 = y[i-1]
-        y1 = y[i]
-        y2 = y[i+1]
-        plot.plot([x0,x1,x2],[y0,y1,y2])
-        # print x[i]
-
-    # plot.plot(times, equations, 'r', label="Lines")
-
 def plot_months(months):
     """Plot monthly statistics before and after cleaning.
 
@@ -950,52 +879,24 @@ def plot_ranges_helper(fig, title1, title2, list1, list2,
     upper = mean + 1.0*stddev
     plot.fill_between(times1, lower, upper, facecolor='orange', alpha=0.06)
 
-def plot_spline(intercepts, lines):
-    """Create a spline with list of best fit line intercepts.
-    """
-    x = intercepts['x-intercepts']
-    y = intercepts['y-intercepts']
-
-    print len(x), "pts", len(x) / 24, "days"
-    print len(y), "pts", len(y) / 24, "days"
-
+def plot_spline(x, y, xnew, ynew):
     times = []
-    count = 1
     for time in x:
         times.append(datetime.datetime.utcfromtimestamp(time))
-        count += 1
+    times2 = []
+    for time in xnew:
+        times2.append(datetime.datetime.utcfromtimestamp(time))
 
-    fig = plot.figure('MHV linear fit intercepts.')
+    fig = plot.figure('MHV linear fit intercepts with cubic spline applied.')
 
-    # TODO - use the entire range, instead of just the first 24 points
-    plot.plot(times[0:24], y[0:24], color='blue', marker='+', label='Intercepts')
-
-    lineX = []
-    lineY = []
-    slopes = []
-    intercepts = []
-    for line in lines:
-        lineX.append(datetime.datetime.utcfromtimestamp(line['x']))
-        lineY.append(line['y'])
-        slopes.append(line['slope'])
-        intercepts.append(line['intercept'])
-    print len(lineX), "pts", len(lineX) / 24, "days"
-    print len(lineY), "pts", len(lineY) / 24, "days"
-    # TODO - use the entire range, instead of just the first 24 points
-    plot.plot(lineX[0:24], lineY[0:24], color='green', label='Line X,Y')
-
-    # TODO - use the entire range, instead of just the first 24 points
-    plot_lines_2(slopes[0:24], intercepts[0:24], x[0:24], y[0:24])
-    # slope, intercept = np.polyfit(slopes[0], intercepts[0], 1)
-    # plot.plot(slopes[0], slopes[0]*slope + intercept, 'r')
-
-
+    plot.plot(times, y, color='blue', linestyle='none', marker='o', label='Intercepts')
+    plot.plot(times2, ynew, color='green', linestyle='--', label='Cubic')
     plot.legend(loc='best', numpoints=1, frameon=False)
+
     mng = plot.get_current_fig_manager()
     mng.window.showMaximized()
     plot.tight_layout()
     plot.show()
-    return
 
 def plot_subplot(fig, num, title, timeList, rLabel, mLabel,
                 color='b', marker='s'):
