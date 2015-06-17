@@ -49,6 +49,7 @@ class KUSGSAlgorithm(Algorithm):
 
     def process(self, timeseries):
         """Process the data to calculate K-USGS indices.
+        K-USGS is always calculated with entire months of data.
 
         Parameters
         ----------
@@ -159,8 +160,8 @@ def clean_mhvs(channel, timeseries, rangeLimit, distributionLimit):
                 # Clean out MHVs at the edges of the monthly distribution.
                 hour = clean_distribution(hour, minimum, maximum, avg)
                 hours.append(hour)
-                rawHours.append(dayHour)       # Kept for printing/plotting only
-            days.append(day)                   # Kept for printing/plotting only
+                rawHours.append(dayHour)      # Kept for printing/plotting only
+            days.append(day)                  # Kept for printing/plotting only
 
         month.hours = hours
         hours = []
@@ -329,7 +330,6 @@ def remove_sr_curve(months, spline):
     -------
     """
     print "Remove SR Curve"
-    # print spline
     # TODO need to subtract SR curve from all MHVs.
     x = spline['x']
     y = spline['y']
@@ -337,6 +337,11 @@ def remove_sr_curve(months, spline):
     times = []
     for time in x:
         times.append(datetime.datetime.utcfromtimestamp(time))
+
+    for val in times:
+        print val
+    print "Length X:", len(x)
+    print "Length Times:", len(times)
 
     print "Times type: ", type(times[0])
     for month in months:
@@ -398,11 +403,31 @@ def get_lines(months):
         List of line segments defined by 'slope' and 'intercept' for y=mx+b.
     """
     lines = []
+    numMonths = len(months)
 
-    for i in range(1, len(months)-2):
-        m0 = months[i-1]
-        m1 = months[i]
-        m2 = months[i+1]
+    if numMonths < 3:
+        raise Exception('Must have data from 3 months in order to extract 2 '
+            + 'additional points at the begin and end of the month for line '
+            + 'segment calculations for desired month.')
+
+    if numMonths > 3:
+        for i in range(1, len(months)-2):
+            m0 = months[i-1]
+            m1 = months[i]
+            m2 = months[i+1]
+
+            allHours = m0.hours[-2:] + m1.hours + m2.hours[0:2]
+
+            for j in range(1, len(allHours)-2):
+                h0 = allHours[j-1]
+                h1 = allHours[j]
+                h2 = allHours[j+1]
+
+                lines.append(get_line(h0, h1, h2))
+    else:
+        m0 = months[0]
+        m1 = months[1]
+        m2 = months[2]
 
         allHours = m0.hours[-2:] + m1.hours + m2.hours[0:2]
 
@@ -937,7 +962,7 @@ def plot_spline(x, y, xnew, ynew):
     for time in xnew:
         times2.append(datetime.datetime.utcfromtimestamp(time))
 
-    fig = plot.figure('MHV linear fit intercepts with cubic spline applied.')
+    fig = plot.figure('MHV linear fit intercepts with cubic spline applied')
 
     plot.plot(times, y, color='blue', linestyle='none', marker='o', label='Intercepts')
     plot.plot(times2, ynew, color='green', linestyle='--', label='Cubic')
