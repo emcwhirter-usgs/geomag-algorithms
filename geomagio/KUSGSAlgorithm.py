@@ -26,7 +26,8 @@ class KUSGSAlgorithm(Algorithm):
     """
 
     def __init__(self, rangeLimit=1.0, distLimit=3.0):
-        Algorithm.__init__(self, inchannels=['H'], outchannels=['H','H','H','H'])
+        Algorithm.__init__(self, inchannels=['H', 'E'],
+                        outchannels=['H','H','H','H'])
 
         self.rangeLimit = float(rangeLimit)
         self.distLimit = float(distLimit)
@@ -62,12 +63,20 @@ class KUSGSAlgorithm(Algorithm):
                 Standard deviation limit to use for eliminating based on ranges.
         """
         # TODO - Do all of the below with E in addition to H
-        kVariation = get_k_variation('H', timeseries, self.rangeLimit, self.distLimit)
-        # months = get_k_variation('D', timeseries, self.rangeLimit, self.distLimit)
+        kVariationH = get_k_variation('H',
+            timeseries, self.rangeLimit, self.distLimit)
+        kVariationE = get_k_variation('E',
+            timeseries, self.rangeLimit, self.distLimit)
+
+        # TODO Translate
+        # translate(kVariationH, kVariationE)
 
         out_stream = timeseries
 
         return out_stream
+
+def translate(kVariationH, kVariationD):
+    print "translate"
 
 def clean_distribution(hour, minimum, maximum, monthAverage):
     """Clean out MHVs at the edges of the monthly distribution, which is done
@@ -237,8 +246,8 @@ def get_intercepts(lines):
     Parameters
     ----------
         lines : List
-            Array-like list of line segments defined by object with 'slope' and
-            'intercept' for y=mx+b
+            Array-like list of line segments defined by object with 'slope'
+            and 'intercept' for y=mx+b
 
     Returns
     -------
@@ -302,6 +311,9 @@ def get_k_variation(channel, timeseries, rangeLimit, distLimit):
             Stream object containing input data.
         self.rangeLimit : Float
             Standard deviation limit to use for eliminating based on ranges.
+
+    Returns
+    -------
     """
     # Clean up the data and make it continuous.
     months = clean_mhvs(channel, timeseries, rangeLimit, distLimit)
@@ -316,57 +328,9 @@ def get_k_variation(channel, timeseries, rangeLimit, distLimit):
     spline = get_spline(intercepts)
 
     # Subtract SR-curve (spline) from the input data.
-    kVariation = remove_sr_curve(channel, timeseries, spline)
+    kTrace = remove_sr_curve(channel, timeseries, spline)
 
-    # TODO Translate
-
-    return kVariation
-
-def remove_sr_curve(channel, timeseries, spline):
-    """Subtract the SR-curve from the original minute data.
-
-    Parameters
-    ----------
-        spline : Dictionary
-            Smoothed Solar-Regular (SR) curve (or non-K variation)
-            Defined as an object/dictionary with a list of x's and a list of y's
-        timeseries : obspy.core.Stream
-            Stream object containing input data.
-
-    Returns
-    -------
-    """
-    # TODO need to subtract SR curve from all MHVs.
-    trace = timeseries.select(channel=channel)[0]
-
-    x = spline['x']
-    y = spline['y']
-
-    times = []
-    for time in x:
-        times.append(datetime.datetime.utcfromtimestamp(time))
-
-    months = get_traces(trace, 'months')
-    numMonths = len(months)
-
-    if numMonths == 3:
-        trace = months[1]
-    elif numMonths != 1:
-        raise Exception('SR curve will only be removed from 1 month of data.')
-
-    totalMinutes = trace.stats.npts
-
-    print "Trace Minutes:", totalMinutes
-    print "Length X:     ", len(x)
-    print "Length Y:     ", len(y)
-    print "Start Trace:", trace.stats.starttime
-    print "Start X:    ", times[0]
-    # print "Start Y:    ", y[0]
-    print "End Trace:", trace.stats.endtime
-    print "End X:    ", times[len(times)-1]
-    # print "End Y:    ", y[len(y)-1]
-    # print trace.stats
-    return
+    return kTrace
 
 def get_line(h0, h1, h2):
     """Find least squares fit of straight line of 3 points.
@@ -487,8 +451,40 @@ def get_spline(intercepts):
     xnew = np.linspace(x[0], x[len(x)-1], 60*len(x))
     ynew = f(xnew)
 
+    if len(xnew) % MINUTESPERDAY != 0:
+        spline = cleanse_spline(xnew, ynew)
+        xnew = spline['x']
+        ynew = spline['y']
+
     # plot_spline(x, y, xnew, ynew)
     return {'x': xnew, 'y': ynew}
+
+def cleanse_spline(x, y):
+    xClean = []
+    yClean = []
+
+    times = []
+    for value in x:
+        times.append(datetime.datetime.fromtimestamp(value))
+
+    i = 0
+    lastMinute = 0
+    lastValue = -1
+    for time in times:
+        minute = time.minute
+
+        # If it is the same time as previous, don't add it
+        if minute == lastMinute:
+            pass
+        else:
+            xClean.append(x[i])
+            yClean.append(y[i])
+
+        lastMinute = minute
+        lastValue = y[i]
+        i += 1
+
+    return {'x': xClean, 'y': yClean}
 
 def get_traces(trace, interval='hours'):
     """Use array of times to slice up trace and collect statistics.
@@ -1096,6 +1092,63 @@ def print_stats(times, interval, format='wide'):
             print interval, " Std Dev: ", str(statistics['standarddeviation'])
             print interval, " Range  : ", str(statistics['maximum'] \
                 - statistics['minimum']), "\n"
+
+def remove_sr_curve(channel, timeseries, spline):
+    """Subtract the SR-curve from the original minute data.
+
+    Parameters
+    ----------
+        channel : String
+            H or D to specify which data channel is being used.
+        spline : Dictionary
+            Smoothed Solar-Regular (SR) curve (or non-K variation)
+            Defined as an object/dictionary with a list of x's and a list of y's
+        timeseries : obspy.core.Stream
+            Stream object containing input data.
+
+    Returns
+    -------
+        A trace of k-variation (SR-curve subtracted from every point).
+    """
+    trace = timeseries.select(channel=channel)[0]
+
+    x = spline['x']
+    y = spline['y']
+
+    times = []
+    for time in x:
+        times.append(datetime.datetime.utcfromtimestamp(time))
+
+    months = get_traces(trace, 'months')
+    numMonths = len(months)
+
+    if numMonths == 3:
+        trace = months[1]
+    elif numMonths != 1:
+        raise Exception('SR curve will only be removed from 1 month of data.')
+
+    if len(x) != len(y):
+        raise Exception('X & Y must have the same number of points.')
+
+    totalMinutes = trace.stats.npts
+    print "len X:", len(x)
+    print "begin", times[0]
+    print "end  ", times[len(times)-1]
+    print "trace:", totalMinutes
+    # count = 0
+    # for val in times:
+    #     print val, "-", y[count]
+    #     count += 1
+    if len(x) != totalMinutes:
+        raise Exception('Spline and trace must have the same number of points.')
+
+    i = 0
+    for point in trace:
+        trace.data[i] = point - y[i]
+        i += 1
+
+    print type(trace)
+    return trace
 
 def statistics(data):
     """Calculate average, standard deviation, minimum and maximum on given
