@@ -293,7 +293,7 @@ def get_k_variation(channel, timeseries, rangeLimit, distLimit):
 
     Parameters
     ----------
-        channel: String
+        channel : String
             H or D to specify which data channel to use.
         self.distLimit : Float
             Standard deviation limit to use for eliminating based on
@@ -315,22 +315,30 @@ def get_k_variation(channel, timeseries, rangeLimit, distLimit):
     # Create a cubic spline from the intercepts.
     spline = get_spline(intercepts)
 
-    # TODO Subtract spline from the data
-    kVariation = remove_sr_curve(months, spline)
+    # Subtract SR-curve (spline) from the input data.
+    kVariation = remove_sr_curve(channel, timeseries, spline)
+
     # TODO Translate
 
     return kVariation
 
-def remove_sr_curve(months, spline):
-    """
+def remove_sr_curve(channel, timeseries, spline):
+    """Subtract the SR-curve from the original minute data.
+
     Parameters
     ----------
+        spline : Dictionary
+            Smoothed Solar-Regular (SR) curve (or non-K variation)
+            Defined as an object/dictionary with a list of x's and a list of y's
+        timeseries : obspy.core.Stream
+            Stream object containing input data.
 
     Returns
     -------
     """
-    print "Remove SR Curve"
     # TODO need to subtract SR curve from all MHVs.
+    trace = timeseries.select(channel=channel)[0]
+
     x = spline['x']
     y = spline['y']
 
@@ -338,21 +346,26 @@ def remove_sr_curve(months, spline):
     for time in x:
         times.append(datetime.datetime.utcfromtimestamp(time))
 
-    for val in times:
-        print val
-    print "Length X:", len(x)
-    print "Length Times:", len(times)
+    months = get_traces(trace, 'months')
+    numMonths = len(months)
 
-    print "Times type: ", type(times[0])
-    for month in months:
-        # print month
-        print type(month.stats.starttime.timestamp)
-        for hour in month.hours:
-            avg = hour.stats.statistics['average']
-            # Subtract solar regular value
-            hour.stats.statistics['average'] = avg - 20000
-            # print hour.stats.statistics
+    if numMonths == 3:
+        trace = months[1]
+    elif numMonths != 1:
+        raise Exception('SR curve will only be removed from 1 month of data.')
 
+    totalMinutes = trace.stats.npts
+
+    print "Trace Minutes:", totalMinutes
+    print "Length X:     ", len(x)
+    print "Length Y:     ", len(y)
+    print "Start Trace:", trace.stats.starttime
+    print "Start X:    ", times[0]
+    # print "Start Y:    ", y[0]
+    print "End Trace:", trace.stats.endtime
+    print "End X:    ", times[len(times)-1]
+    # print "End Y:    ", y[len(y)-1]
+    # print trace.stats
     return
 
 def get_line(h0, h1, h2):
@@ -410,13 +423,15 @@ def get_lines(months):
             + 'additional points at the begin and end of the month for line '
             + 'segment calculations for desired month.')
 
+    # If we pull 2 points instead of 4 from the month after, we
+    # end up 2 hours short later in the process.
     if numMonths > 3:
         for i in range(1, len(months)-2):
             m0 = months[i-1]
             m1 = months[i]
             m2 = months[i+1]
 
-            allHours = m0.hours[-2:] + m1.hours + m2.hours[0:2]
+            allHours = m0.hours[-2:] + m1.hours + m2.hours[0:4]
 
             for j in range(1, len(allHours)-2):
                 h0 = allHours[j-1]
@@ -429,7 +444,7 @@ def get_lines(months):
         m1 = months[1]
         m2 = months[2]
 
-        allHours = m0.hours[-2:] + m1.hours + m2.hours[0:2]
+        allHours = m0.hours[-2:] + m1.hours + m2.hours[0:4]
 
         for j in range(1, len(allHours)-2):
             h0 = allHours[j-1]
