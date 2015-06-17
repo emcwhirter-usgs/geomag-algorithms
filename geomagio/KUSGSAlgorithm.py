@@ -69,13 +69,15 @@ class KUSGSAlgorithm(Algorithm):
             timeseries, self.rangeLimit, self.distLimit)
 
         # TODO Translate
-        # translate(kVariationH, kVariationE)
+        translate(kVariationH, kVariationE)
 
         out_stream = timeseries
 
         return out_stream
 
 def translate(kVariationH, kVariationD):
+    """
+    """
     print "translate"
 
 def clean_distribution(hour, minimum, maximum, monthAverage):
@@ -240,6 +242,45 @@ def clean_range(hour, maxRange):
 
     return hour
 
+def clean_spline(x, y):
+    """Remove any duplicate time points produced by np.linspace.
+
+    Parameters
+    ----------
+        x : list
+            Epoch times
+        y : list
+            nT values
+    Returns
+    -------
+        Object with 'x' and 'y' defined as lists.
+    """
+    xClean = []
+    yClean = []
+
+    times = []
+    for value in x:
+        times.append(datetime.datetime.fromtimestamp(value))
+
+    i = 0
+    lastMinute = 0
+    lastValue = -1
+    for time in times:
+        minute = time.minute
+
+        # If it is the same time as previous, don't add it
+        if minute == lastMinute:
+            pass
+        else:
+            xClean.append(x[i])
+            yClean.append(y[i])
+
+        lastMinute = minute
+        lastValue = y[i]
+        i += 1
+
+    return {'x': xClean, 'y': yClean}
+
 def get_intercepts(lines):
     """Find intercepts of consecutive straight lines.
 
@@ -314,6 +355,7 @@ def get_k_variation(channel, timeseries, rangeLimit, distLimit):
 
     Returns
     -------
+        A trace of k-variation (SR-curve subtracted from every point).
     """
     # Clean up the data and make it continuous.
     months = clean_mhvs(channel, timeseries, rangeLimit, distLimit)
@@ -428,7 +470,7 @@ def get_spline(intercepts):
         intercepts : dictionary
             An object with 2 lists containing x and y-intercepts.
             x values are seconds since epoch.
-            y values are nanoTeslas (nT)
+            y values are nanoTeslas (nT).
 
     Returns
     -------
@@ -452,39 +494,12 @@ def get_spline(intercepts):
     ynew = f(xnew)
 
     if len(xnew) % MINUTESPERDAY != 0:
-        spline = cleanse_spline(xnew, ynew)
+        spline = clean_spline(xnew, ynew)
         xnew = spline['x']
         ynew = spline['y']
 
     # plot_spline(x, y, xnew, ynew)
     return {'x': xnew, 'y': ynew}
-
-def cleanse_spline(x, y):
-    xClean = []
-    yClean = []
-
-    times = []
-    for value in x:
-        times.append(datetime.datetime.fromtimestamp(value))
-
-    i = 0
-    lastMinute = 0
-    lastValue = -1
-    for time in times:
-        minute = time.minute
-
-        # If it is the same time as previous, don't add it
-        if minute == lastMinute:
-            pass
-        else:
-            xClean.append(x[i])
-            yClean.append(y[i])
-
-        lastMinute = minute
-        lastValue = y[i]
-        i += 1
-
-    return {'x': xClean, 'y': yClean}
 
 def get_traces(trace, interval='hours'):
     """Use array of times to slice up trace and collect statistics.
@@ -724,6 +739,14 @@ def plot_dist_subplot(fig, months, plotCount, title,
     plot.fill_between(times1, lower, upper, facecolor='yellow', alpha=0.08)
 
 def plot_finalize(points):
+    """Helper method for plotting
+
+    Parameters
+    ----------
+        points : Integer
+            Number of points displayed on the plot.
+    """
+
     pts = str(points) + " pts"
     plot.legend(loc='best', title=pts)
 
@@ -734,6 +757,18 @@ def plot_finalize(points):
     plot.show()
 
 def plot_initialize(fig, title, set_colors=False):
+    """Helper method for plotting.
+
+    Parameters
+    ----------
+        fig : magplotlib.figure.Figure
+            Instance of plot.figure to attach the subplot to.
+
+        title : String
+            Title to appear on plot.
+        set_colors : Boolean
+            True to use colors defined here, False to use system defaults
+    """
     subplot = fig.add_subplot(111)
     subplot.set_title(title)
 
@@ -744,6 +779,21 @@ def plot_initialize(fig, title, set_colors=False):
     subplot.xaxis.set_major_locator(DayLocator([5,15,25]))
 
 def plot_intercepts(xIntercepts, yIntercepts, begin=0, cap=0):
+    """Plot intercepts of line segments of least-squares-fit lines from the
+    3 MHV sliding window.
+
+    Parameters
+    ----------
+        begin : Integer
+            Begin the plot at this point.
+        cap : Integer
+            Cap the plot at this many points.
+        xIntercepts : List
+            Epoch times.
+        yIntercepts : List
+            nT values.
+    """
+
     if cap == 0:
         cap = len(xIntercepts)
 
@@ -763,6 +813,18 @@ def plot_intercepts(xIntercepts, yIntercepts, begin=0, cap=0):
     plot_finalize(cap-begin)
 
 def plot_lines(lines, begin=0, cap=0):
+    """Plot line segments representing the least-squares-fit lines from the
+    3 MHV sliding window.
+
+    Parameters
+    ----------
+        begin : Integer
+            Begin the plot at this point.
+        cap : Integer
+            Cap the plot at this many points.
+        lines : Object
+            Has 'x', 'y', 'slope', and 'intercept' defined for each point.
+    """
     x = []
     y = []
     y2 = []
@@ -881,7 +943,7 @@ def plot_ranges_helper(fig, title1, title2, list1, list2,
     Parameters
     ----------
         fig : magplotlib.figure.Figure
-            Instance of plot.figure to attach the subplot to
+            Instance of plot.figure to attach the subplot to.
         title1 : String
             1st half of subplot title
         title2 : String
@@ -966,6 +1028,20 @@ def plot_ranges_helper(fig, title1, title2, list1, list2,
     plot.fill_between(times1, lower, upper, facecolor='orange', alpha=0.06)
 
 def plot_spline(x, y, xnew, ynew):
+    """Plot cubic spline vs MHVs used to create it.
+
+    Parameters
+    ----------
+        x : List
+            MHV Epoch time values.
+        y : List
+            MHV nT values.
+        xnew : List
+            Spline Epoch time values.
+        ynew : List
+            Spline nT values.
+    """
+
     times = []
     for time in x:
         times.append(datetime.datetime.utcfromtimestamp(time))
@@ -975,7 +1051,7 @@ def plot_spline(x, y, xnew, ynew):
 
     fig = plot.figure('MHV linear fit intercepts with cubic spline applied')
 
-    plot.plot(times, y, color='blue', linestyle='none', marker='o', label='Intercepts')
+    plot.plot(times, y, color='blue', ls='none', marker='o', label='Intercepts')
     plot.plot(times2, ynew, color='green', linestyle='--', label='Cubic')
     plot.legend(loc='best', numpoints=1, frameon=False)
 
@@ -1131,14 +1207,7 @@ def remove_sr_curve(channel, timeseries, spline):
         raise Exception('X & Y must have the same number of points.')
 
     totalMinutes = trace.stats.npts
-    print "len X:", len(x)
-    print "begin", times[0]
-    print "end  ", times[len(times)-1]
-    print "trace:", totalMinutes
-    # count = 0
-    # for val in times:
-    #     print val, "-", y[count]
-    #     count += 1
+
     if len(x) != totalMinutes:
         raise Exception('Spline and trace must have the same number of points.')
 
@@ -1147,7 +1216,6 @@ def remove_sr_curve(channel, timeseries, spline):
         trace.data[i] = point - y[i]
         i += 1
 
-    print type(trace)
     return trace
 
 def statistics(data):
