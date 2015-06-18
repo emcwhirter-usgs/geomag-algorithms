@@ -1271,6 +1271,8 @@ def translate(kVariationH, kVariationE):
     maxH = -999
     minE = 999
     minH = 999
+    station = kVariationH.stats.station
+    # TODO - return object with starttime and K for each 3-hour block
 
     for currentH in kVariationH:
         if currentH > maxH:
@@ -1293,8 +1295,7 @@ def translate(kVariationH, kVariationE):
             else:
                 rangeBin = rangeE
 
-            kValue = translate_table(rangeBin)
-            # TODO scale based on observatory
+            kValue = translate_table(rangeBin, station)
 
             count = 0
             maxE = -999
@@ -1305,39 +1306,199 @@ def translate(kVariationH, kVariationE):
         count += 1
         i += 1
 
-def translate_table(rangeNT):
+def translate_table(rangeNT, station):
     """Translate nT range for 3 hour bin based on K value table from Niemegk
-    observatory.
+    observatory. USGS scales shown here.
+
+    Co-Latitude     K=9   K=8   K=7   K=6   K=5   K=4   K=3   K=2   K=1
+    ----------------   5 times Niemegk   ------------------------------
+    BRW   20.81     2500  1650  1000  600   350   200   100   50    25
+    CMO   24.87     2500  1650  1000  600   350   200   100   50    25
+    ----------------   2 times Niemegk   ------------------------------
+    SIT   29.72     1000   660   400  240   140    80    40   20    10
+
+    SHU   34.65      620   409   248  148    87    50    25   12     6
+    ----------------   1.4 times Niemegk   ----------------------------
+    NEW   34.96      700   462   280  168    98    56    28   14     7
+    ----------------   1 times Niemegk   ------------------------------
+    Niemegk          500   330   200  120    70    40    20   10     5
+    FRD   41.04      500   330   200  120    70    40    20   10     5
+    BOU   41.25      500   330   200  120    70    40    20   10     5
+
+    FRN   46.28      350   230   140   85    50    30    16    8     4
+    BSL   49.40      350   230   140   85    50    30    16    8     4
+    TUC   49.75      350   231   140   85    50    30    16    8     4
+    DLR   51.30      350   230   140   85    50    30    16    8     4
+
+    SJG   60.83      300   200   120   70    40    24    12    6     2
+    HON   68.53      300   200   120   70    40    24    12    6     2
+    GUA   85.26      300   200   120   70    40    24    12    6     2
 
     Parameters
     ----------
         rangeNT : Float
             nT range of values in a 3-hour bin.
+        station : String
+            3 letter observatory code.
 
     Returns
     -------
-        Integer value of K based on nT range of minutes for bin.
+        Integer value of K based on nT range of minutes for bin and observatory.
     """
 
-    if rangeNT < 5:
-        k = 0
-    elif rangeNT < 10:
-        k = 1
-    elif rangeNT < 20:
-        k = 2
-    elif rangeNT < 40:
-        k = 3
-    elif rangeNT < 70:
-        k = 4
-    elif rangeNT < 120:
-        k = 5
-    elif rangeNT < 200:
-        k = 6
-    elif rangeNT < 330:
-        k = 7
-    elif rangeNT < 500:
-        k = 8
-    else:
-        k = 9
+    if station == 'BRW' or station == 'CMO':
+        if rangeNT < 25:
+            k = 0
+        elif rangeNT < 50:
+            k = 1
+        elif rangeNT < 100:
+            k = 2
+        elif rangeNT < 200:
+            k = 3
+        elif rangeNT < 350:
+            k = 4
+        elif rangeNT < 600:
+            k = 5
+        elif rangeNT < 1000:
+            k = 6
+        elif rangeNT < 1650:
+            k = 7
+        elif rangeNT < 2500:
+            k = 8
+        else:
+            k = 9
+
+    elif station == 'SIT':
+        if rangeNT < 10:
+            k = 0
+        elif rangeNT < 20:
+            k = 1
+        elif rangeNT < 40:
+            k = 2
+        elif rangeNT < 80:
+            k = 3
+        elif rangeNT < 140:
+            k = 4
+        elif rangeNT < 240:
+            k = 5
+        elif rangeNT < 400:
+            k = 6
+        elif rangeNT < 660:
+            k = 7
+        elif rangeNT < 1000:
+            k = 8
+        else:
+            k = 9
+
+    elif station == 'SHU':
+        if rangeNT < 6:
+            k = 0
+        elif rangeNT < 12:
+            k = 1
+        elif rangeNT < 25:
+            k = 2
+        elif rangeNT < 50:
+            k = 3
+        elif rangeNT < 87:
+            k = 4
+        elif rangeNT < 148:
+            k = 5
+        elif rangeNT < 248:
+            k = 6
+        elif rangeNT < 409:
+            k = 7
+        elif rangeNT < 620:
+            k = 8
+        else:
+            k = 9
+
+    elif station == 'NEW':
+        if rangeNT < 7:
+            k = 0
+        elif rangeNT < 14:
+            k = 1
+        elif rangeNT < 28:
+            k = 2
+        elif rangeNT < 56:
+            k = 3
+        elif rangeNT < 98:
+            k = 4
+        elif rangeNT < 168:
+            k = 5
+        elif rangeNT < 280:
+            k = 6
+        elif rangeNT < 462:
+            k = 7
+        elif rangeNT < 700:
+            k = 8
+        else:
+            k = 9
+
+    elif station == 'FRN' or station == 'BSL' or station == 'TUC' \
+                          or station == 'DLR':
+        if rangeNT < 4:
+            k = 0
+        elif rangeNT < 8:
+            k = 1
+        elif rangeNT < 16:
+            k = 2
+        elif rangeNT < 30:
+            k = 3
+        elif rangeNT < 50:
+            k = 4
+        elif rangeNT < 85:
+            k = 5
+        elif rangeNT < 140:
+            k = 6
+        elif rangeNT < 230:
+            k = 7
+        elif rangeNT < 350:
+            k = 8
+        else:
+            k = 9
+
+    elif station == 'SJG' or station == 'HON' or station == 'GUA':
+        if rangeNT < 2:
+            k = 0
+        elif rangeNT < 6:
+            k = 1
+        elif rangeNT < 12:
+            k = 2
+        elif rangeNT < 24:
+            k = 3
+        elif rangeNT < 40:
+            k = 4
+        elif rangeNT < 70:
+            k = 5
+        elif rangeNT < 120:
+            k = 6
+        elif rangeNT < 200:
+            k = 7
+        elif rangeNT < 300:
+            k = 8
+        else:
+            k = 9
+
+    else: # Default, includes BOU and FRD
+        if rangeNT < 5:
+            k = 0
+        elif rangeNT < 10:
+            k = 1
+        elif rangeNT < 20:
+            k = 2
+        elif rangeNT < 40:
+            k = 3
+        elif rangeNT < 70:
+            k = 4
+        elif rangeNT < 120:
+            k = 5
+        elif rangeNT < 200:
+            k = 6
+        elif rangeNT < 330:
+            k = 7
+        elif rangeNT < 500:
+            k = 8
+        else:
+            k = 9
 
     return k
