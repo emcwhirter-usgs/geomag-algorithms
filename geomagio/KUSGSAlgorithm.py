@@ -12,11 +12,13 @@ from matplotlib.dates import \
 from obspy.core import Trace, Stats, Stream, UTCDateTime
 from scipy import interpolate
 
+
 ONEMINUTE = 60
 ONEHOUR = 60 * ONEMINUTE
 ONEDAY = 24 * ONEHOUR
 
 MINUTESPERDAY = 24 * 60
+
 
 class KUSGSAlgorithm(Algorithm):
     """Algorithm for creating K-USGS indices.
@@ -70,6 +72,7 @@ class KUSGSAlgorithm(Algorithm):
 
         # Translate nT ranges into K values.
         allK = translate(kVariationH, kVariationE)
+        print allK
 
         out_stream = timeseries
 
@@ -97,14 +100,9 @@ def clean_distribution(hour, minimum, maximum, monthAverage):
         Trace <obspy.core.trac.Trace>
             Trace with updated statistics.
     """
-    clearAvg = False
-
     average = hour.stats.statistics['average']
 
     if (average > maximum) or (average < minimum) or (np.isnan(average)):
-        clearAvg = True
-
-    if clearAvg:
         stats = Stats(hour.stats)
         stats.statistics = copy.deepcopy(stats.statistics)
         stats.statistics['average'] = monthAverage
@@ -134,7 +132,10 @@ def clean_mhvs(channel, timeseries, rangeLimit, distributionLimit):
             List containing months with complete set of clean MHVs for the
             month attached as month.hours.
     """
-    trace = timeseries.select(channel=channel)[0]
+    try:
+        trace = timeseries.select(channel=channel)[0]
+    except:
+        raise Exception('Selected data not available.')
     trace.stats.statistics = statistics(trace.data)
 
     # This algorithm operates on entire calendar days of 1-Minute values.
