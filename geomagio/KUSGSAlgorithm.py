@@ -215,8 +215,6 @@ def clean_range(hour, maxRange):
         Trace <obspy.core.trac.Trace>
             Trace with updated statistics.
     """
-    trace = []
-
     clearAvg = False
 
     maximum = hour.stats.statistics['maximum']
@@ -242,7 +240,8 @@ def clean_range(hour, maxRange):
     return hour
 
 def clean_spline(x, y):
-    """Remove any duplicate time points produced by np.linspace.
+    """Remove any duplicate time points produced by np.linspace. This ensures
+    that we have exactly 1 point for every minute, and no more.
 
     Parameters
     ----------
@@ -264,19 +263,16 @@ def clean_spline(x, y):
 
     i = 0
     lastMinute = 0
-    lastValue = -1
+
     for time in times:
         minute = time.minute
 
-        # If it is the same time as previous, don't add it
-        if minute == lastMinute:
-            pass
-        else:
+        # If it is not the same time as previous, add it
+        if minute != lastMinute:
             xClean.append(x[i])
             yClean.append(y[i])
 
         lastMinute = minute
-        lastValue = y[i]
         i += 1
 
     return {'x': xClean, 'y': yClean}
