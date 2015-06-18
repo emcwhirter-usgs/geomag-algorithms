@@ -62,7 +62,7 @@ class KUSGSAlgorithm(Algorithm):
             self.rangeLimit : Float
                 Standard deviation limit to use for eliminating based on ranges.
         """
-        # TODO - Do all of the below with E in addition to H
+        # Must run through all of the calculations with E in addition to H.
         kVariationH = get_k_variation('H',
             timeseries, self.rangeLimit, self.distLimit)
         kVariationE = get_k_variation('E',
@@ -74,11 +74,6 @@ class KUSGSAlgorithm(Algorithm):
         out_stream = timeseries
 
         return out_stream
-
-def translate(kVariationH, kVariationD):
-    """
-    """
-    print "translate"
 
 def clean_distribution(hour, minimum, maximum, monthAverage):
     """Clean out MHVs at the edges of the monthly distribution, which is done
@@ -1249,3 +1244,100 @@ def statistics(data):
             'standarddeviation': np.nan
         }
     return statistics
+
+def translate(kVariationH, kVariationE):
+    """Find translation value using the larger of the two variation (H & E)
+    over each time interval. Time intervals are defined as 1 of the 8 3-hour
+    windows for every day beginning at UTC 00:00:00.00.
+
+    Parameters
+    ----------
+        kVariationE : obspy.core.trace.Trace
+            A trace of k-variation (SR-curve subtracted from every point) for E.
+        kVariationH : obspy.core.trace.Trace
+            A trace of k-variation (SR-curve subtracted from every point) for H.
+    """
+
+    if len(kVariationE) != len(kVariationH):
+        raise Exception('Must have the same amount of H and E data.')
+
+    if kVariationH.stats.npts % MINUTESPERDAY != 0:
+        raise Exception('Must have full days of minute data.')
+
+    binSize = 3 * 60 # 3 Hours of 1-Minute data
+    count = 0
+    i = 0
+    maxE = -999
+    maxH = -999
+    minE = 999
+    minH = 999
+
+    for currentH in kVariationH:
+        if currentH > maxH:
+            maxH = currentH
+        if currentH < minH:
+            maxH = currentH
+
+        currentE = kVariationE[i]
+        if currentE > maxE:
+            maxE = currentE
+        if currentE < minE:
+            minE = currentE
+
+        if count > binSize:
+            rangeE = maxE - minE
+            rangeH = maxH - minH
+
+            if rangeH > rangeE:
+                rangeBin = rangeH
+            else:
+                rangeBin = rangeE
+
+            kValue = translate_table(rangeBin)
+            # TODO scale based on observatory
+
+            count = 0
+            maxE = -999
+            maxH = -999
+            minE = 999
+            minH = 999
+
+        count += 1
+        i += 1
+
+def translate_table(rangeNT):
+    """Translate nT range for 3 hour bin based on K value table from Niemegk
+    observatory.
+
+    Parameters
+    ----------
+        rangeNT : Float
+            nT range of values in a 3-hour bin.
+
+    Returns
+    -------
+        Integer value of K based on nT range of minutes for bin.
+    """
+
+    if rangeNT < 5:
+        k = 0
+    elif rangeNT < 10:
+        k = 1
+    elif rangeNT < 20:
+        k = 2
+    elif rangeNT < 40:
+        k = 3
+    elif rangeNT < 70:
+        k = 4
+    elif rangeNT < 120:
+        k = 5
+    elif rangeNT < 200:
+        k = 6
+    elif rangeNT < 330:
+        k = 7
+    elif rangeNT < 500:
+        k = 8
+    else:
+        k = 9
+
+    return k
