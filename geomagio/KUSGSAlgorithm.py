@@ -94,7 +94,8 @@ def clean_distribution(hour, minimum, maximum, monthAverage):
 
     Returns
     -------
-        Trace with updated statistics.
+        Trace <obspy.core.trac.Trace>
+            Trace with updated statistics.
     """
     clearAvg = False
 
@@ -129,8 +130,9 @@ def clean_mhvs(channel, timeseries, rangeLimit, distributionLimit):
 
     Returns
     -------
-        List containing months with complete set of clean MHVs for the month
-        attached as month.hours.
+        list
+            List containing months with complete set of clean MHVs for the
+            month attached as month.hours.
     """
     trace = timeseries.select(channel=channel)[0]
     trace.stats.statistics = statistics(trace.data)
@@ -209,7 +211,8 @@ def clean_range(hour, maxRange):
 
     Returns
     -------
-        Trace with updated statistics.
+        Trace <obspy.core.trac.Trace>
+            Trace with updated statistics.
     """
     trace = []
 
@@ -248,7 +251,8 @@ def clean_spline(x, y):
             nT values
     Returns
     -------
-        Object with 'x' and 'y' defined as lists.
+        Dictionary
+            Object with 'x' and 'y' defined as lists.
     """
     xClean = []
     yClean = []
@@ -287,7 +291,8 @@ def get_intercepts(lines):
 
     Returns
     -------
-        List of intercept objects with 'x' and 'y' defined.
+        Dictionary
+            List of intercept objects with 'x' and 'y' defined.
     """
     xIntercepts = []
     yIntercepts = []
@@ -350,7 +355,8 @@ def get_k_variation(channel, timeseries, rangeLimit, distLimit):
 
     Returns
     -------
-        A trace of k-variation (SR-curve subtracted from every point).
+        Trace <obspy.core.trac.Trace>
+            A trace of k-variation (SR-curve subtracted from every point).
     """
     # Clean up the data and make it continuous.
     months = clean_mhvs(channel, timeseries, rangeLimit, distLimit)
@@ -383,7 +389,8 @@ def get_line(h0, h1, h2):
 
     Returns
     -------
-        Object with properties 'slope', 'intercept', 'x' and 'y' defined.
+        Dictionary
+            Object with properties 'slope', 'intercept', 'x' and 'y' defined.
     """
     x0 = h0.stats.starttime.timestamp
     x1 = h1.stats.starttime.timestamp
@@ -414,7 +421,8 @@ def get_lines(months):
 
     Returns
     -------
-        List of line segments defined by 'slope' and 'intercept' for y=mx+b.
+        List
+            List of line segments defined by 'slope' and 'intercept' for y=mx+b.
     """
     lines = []
     numMonths = len(months)
@@ -469,7 +477,8 @@ def get_spline(intercepts):
 
     Returns
     -------
-        Object with 'x' and 'y' defined as lists.
+        Dictionary
+            Object with 'x' and 'y' defined as lists.
     """
     x = intercepts['x-intercepts']
     y = intercepts['y-intercepts']
@@ -509,7 +518,8 @@ def get_traces(trace, interval='hours'):
             'hours', 'days', 'months' are accepted
     Returns
     -------
-        array-like list of traces with statistics.
+        List
+            Array-like list of traces with statistics.
     """
     traces = []
 
@@ -741,7 +751,6 @@ def plot_finalize(points):
         points : Integer
             Number of points displayed on the plot.
     """
-
     pts = str(points) + " pts"
     plot.legend(loc='best', title=pts)
 
@@ -788,7 +797,6 @@ def plot_intercepts(xIntercepts, yIntercepts, begin=0, cap=0):
         yIntercepts : List
             nT values.
     """
-
     if cap == 0:
         cap = len(xIntercepts)
 
@@ -1036,7 +1044,6 @@ def plot_spline(x, y, xnew, ynew):
         ynew : List
             Spline nT values.
     """
-
     times = []
     for time in x:
         times.append(datetime.datetime.utcfromtimestamp(time))
@@ -1179,7 +1186,8 @@ def remove_sr_curve(channel, timeseries, spline):
 
     Returns
     -------
-        A trace of k-variation (SR-curve subtracted from every point).
+        Trace <obspy.core.trac.Trace>
+            A trace of k-variation (SR-curve subtracted from every point).
     """
     trace = timeseries.select(channel=channel)[0]
 
@@ -1224,7 +1232,8 @@ def statistics(data):
 
     Returns
     -------
-        object with key/value pairs for statistics
+        Dictionary
+            Object with key/value pairs for statistics
     """
     mean = np.nanmean(data)
     # Skip some calculations if this entire array is NaN's.
@@ -1259,12 +1268,12 @@ def translate(kVariationH, kVariationE):
 
     Returns
     -------
-        Object with 'julianday', 'hourblock' and 'k' defined.
-        k is a 1 decimal value defining magnetic activity for a 3-hour window.
-        julianday is day the k applies to.
-        hourblock is 1 of 8 3-hour blocks the k applies to for the julian day.
+        Dictionary
+            Object with 'julianday', 'hourblock' and 'k' defined.
+            k is a decimal value defining magnetic activity for a 3-hour window.
+            julianday is day the k applies to.
+            hourblock is 1 of 8 3-hour blocks in a julian day the k applies to.
     """
-
     if len(kVariationE) != len(kVariationH):
         raise Exception('Must have the same amount of H and E data.')
 
@@ -1377,9 +1386,9 @@ def translate_table(rangeNT, station):
 
     Returns
     -------
-        Integer value of K based on nT range of minutes for bin and observatory.
+        Integer
+            Value of K based on nT range of minutes for bin and observatory.
     """
-
     if station == 'BRW' or station == 'CMO':
         if rangeNT < 25:
             k = 0
