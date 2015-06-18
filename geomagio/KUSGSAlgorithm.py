@@ -68,8 +68,8 @@ class KUSGSAlgorithm(Algorithm):
         kVariationE = get_k_variation('E',
             timeseries, self.rangeLimit, self.distLimit)
 
-        # TODO Translate
-        translate(kVariationH, kVariationE)
+        # Translate nT ranges into K values.
+        allK = translate(kVariationH, kVariationE)
 
         out_stream = timeseries
 
@@ -1256,6 +1256,13 @@ def translate(kVariationH, kVariationE):
             A trace of k-variation (SR-curve subtracted from every point) for E.
         kVariationH : obspy.core.trace.Trace
             A trace of k-variation (SR-curve subtracted from every point) for H.
+
+    Returns
+    -------
+        Object with 'julianday', 'hourblock' and 'k' defined.
+        k is a 1 decimal value defining magnetic activity for a 3-hour window.
+        julianday is day the k applies to.
+        hourblock is 1 of 8 3-hour blocks the k applies to for the julian day.
     """
 
     if len(kVariationE) != len(kVariationH):
@@ -1264,15 +1271,20 @@ def translate(kVariationH, kVariationE):
     if kVariationH.stats.npts % MINUTESPERDAY != 0:
         raise Exception('Must have full days of minute data.')
 
-    binSize = 3 * 60 # 3 Hours of 1-Minute data
-    count = 0
+    binCount = 1    # Number of bins; need to average 3 bins together
+    binSize = 60    # 1 Hour of 1-Minute data
+    count = 1       # Count within each bin
+    hourBlock = 0   # Specify which daily 3-hour block: 0, 3, 6, 9, 12, 18, 21
+    julianDay = kVariationH.stats.starttime.julday
+    kHour = []      # Keep track of hour block: 0, 3, 6, 9, 12, 18, 21
+    kJulianDay = [] # Keep track of Julian Day
+    kValue = []     # Keep track of K value
     i = 0
     maxE = -999
     maxH = -999
     minE = 999
     minH = 999
     station = kVariationH.stats.station
-    # TODO - return object with starttime and K for each 3-hour block
 
     for currentH in kVariationH:
         if currentH > maxH:
@@ -1286,7 +1298,7 @@ def translate(kVariationH, kVariationE):
         if currentE < minE:
             minE = currentE
 
-        if count > binSize:
+        if count >= binSize:
             rangeE = maxE - minE
             rangeH = maxH - minH
 
@@ -1295,7 +1307,27 @@ def translate(kVariationH, kVariationE):
             else:
                 rangeBin = rangeE
 
-            kValue = translate_table(rangeBin, station)
+            if binCount == 1:
+                k1 = translate_table(rangeBin, station)
+            elif binCount == 2:
+                k2 = translate_table(rangeBin, station)
+            elif binCount == 3:
+                k3 = translate_table(rangeBin, station)
+                k = (k1 + k2 + k3) / 3.0
+                k = round(k, 1)
+
+                kValue.append(k)
+                kJulianDay.append(julianDay)
+                kHour.append(hourBlock)
+
+                hourBlock += 3
+                if hourBlock > 21:
+                    hourBlock = 0
+                    julianDay += 1
+
+                binCount = 0
+
+            binCount += 1
 
             count = 0
             maxE = -999
@@ -1305,6 +1337,8 @@ def translate(kVariationH, kVariationE):
 
         count += 1
         i += 1
+
+    return {'julianday': kJulianDay, 'hourblock': kHour, 'k': kValue}
 
 def translate_table(rangeNT, station):
     """Translate nT range for 3 hour bin based on K value table from Niemegk
