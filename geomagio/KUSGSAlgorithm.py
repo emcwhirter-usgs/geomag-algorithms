@@ -27,7 +27,7 @@ class KUSGSAlgorithm(Algorithm):
     ----------
     """
 
-    def __init__(self, rangeLimit=1.0, distLimit=3.0):
+    def __init__(self, rangeLimit=2.0, distLimit=5.0):
         Algorithm.__init__(self, inchannels=['H', 'E'],
                         outchannels=['H','H','H','H'])
 
@@ -65,18 +65,67 @@ class KUSGSAlgorithm(Algorithm):
                 Standard deviation limit to use for eliminating based on ranges.
         """
         # Must run through all of the calculations with E in addition to H.
-        kVariationH = get_k_variation('H',
-            timeseries, self.rangeLimit, self.distLimit)
-        kVariationE = get_k_variation('E',
-            timeseries, self.rangeLimit, self.distLimit)
+        kVariationH = get_ks('H', timeseries, self.rangeLimit, self.distLimit)
+        kVariationE = get_ks('E', timeseries, self.rangeLimit, self.distLimit)
 
         # Translate nT ranges into K values.
+        print kVariationH
         allK = translate(kVariationH, kVariationE)
-        print allK
+        output_k(allK, kVariationH)
 
         out_stream = timeseries
 
         return out_stream
+
+def output_k(allK, trace):
+    """
+    TODO: This should be a file output parameter
+    """
+    stats = trace.stats
+    date = stats.starttime
+
+    print "\n\n         ", stats.station_name.upper() + ","
+    print "      " + date.strftime("%B").upper() + "  " + str(date.year).upper()
+    print "      MODAYR  JULIAN   0    3    6    9     12   15   18   21HOUR  KSUM   AK"
+    print "              DAY\n"
+
+    k = allK['k']
+    hourBin = allK['hourblock']
+    julianDay = allK['julianday']
+
+    lastDay = julianDay[0]
+    i = 0
+    line = ""
+
+    for value in k:
+        jd = julianDay[i]
+        if jd == lastDay:
+            month = date.month
+            if month < 10:
+                month = " " + str(month)
+            else:
+                month = str(month)
+
+            # TODO - day needs to increment
+            day = date.day
+            if day < 10:
+                day = " " + str(day)
+            else:
+                day = str(day)
+
+            year = str(date.year)
+            year = year[2:4]
+
+            line = line + month + day + year + "   " + str(jd) + "    " + str(value)
+        else:
+            print line
+            line = ""
+
+        lastDay = jd
+        i += 1
+
+    # print stats
+    # print allK
 
 def clean_distribution(hour, minimum, maximum, monthAverage):
     """Clean out MHVs at the edges of the monthly distribution, which is done
@@ -278,7 +327,7 @@ def clean_spline(x, y):
     return {'x': xClean, 'y': yClean}
 
 def get_intercepts(lines):
-    """Find intercepts of consecutive straight lines.
+    """Find all intercepts of consecutive straight lines.
 
     Parameters
     ----------
@@ -304,11 +353,12 @@ def get_intercepts(lines):
         b1 = line1['intercept']
 
         if ((m0 - m1) == 0):
-            # Same slope, no intercept. Using the original point.
+            # Same slope, so no intercept.
             x0 = line0['x']
             x1 = line1['x']
-            # Don't add the point if is exactly the same as the last one.
+            # Don't add the point if is exactly the same as the previous one.
             if ((b0 - b1) != 0) and ((x0 - x1) != 0):
+                # Use the original point.
                 xIntercepts.append(line1['x'])
                 yIntercepts.append(line1['y'])
 
@@ -329,14 +379,10 @@ def get_intercepts(lines):
     # plot_intercepts(xIntercepts, yIntercepts, 0, 0)
     return {'x-intercepts': xIntercepts, 'y-intercepts': yIntercepts}
 
-def get_k_variation(channel, timeseries, rangeLimit, distLimit):
-    """SR-Curve (Solar Regular Curve) uses 24 Mean Hourly Values (MHVs) for 1
-    entire calendar day, plus the last 2 MHVs from the previous day and the
-    first 2 MHVs from the following day. Thus the data is cleaned in daily
-    chuncks using 28 MHVs. MHVs are excluded if they contain minute
-    values that have a large range, or they fall in the tails of the
-    monthly MHV distribution. MHVs that are excluded or don't exist
-    are replaced with a daily or monthly mean.
+def get_ks(channel, timeseries, rangeLimit, distLimit):
+    """Obtain a trace of all K's based on the timeseries for the given
+    channel while limiting the SR-curve based on minute ranges within hours,
+    and distribution of hours with a month.
 
     Parameters
     ----------
@@ -373,7 +419,7 @@ def get_k_variation(channel, timeseries, rangeLimit, distLimit):
     return kTrace
 
 def get_line(h0, h1, h2):
-    """Find least squares fit of straight line of 3 points.
+    """Find least squares fit of a straight line of 3 points.
 
     Parameters
     ----------
@@ -494,6 +540,7 @@ def get_spline(intercepts):
     xnew = np.linspace(x[0], x[len(x)-1], 60*len(x))
     ynew = f(xnew)
 
+    # If np.linspace created too many points, clean them up.
     if len(xnew) % MINUTESPERDAY != 0:
         spline = clean_spline(xnew, ynew)
         xnew = spline['x']
@@ -1169,7 +1216,10 @@ def print_stats(times, interval, format='wide'):
                 - statistics['minimum']), "\n"
 
 def remove_sr_curve(channel, timeseries, spline):
-    """Subtract the SR-curve from the original minute data.
+    """Subtract the SR-curve (Solar Regular Curve) from the original minute
+    data. SR-curve uses 24 Mean Hourly Values (MHVs) for each entire calendar
+    day in a complete calendar month, plus the last 2 MHVs from the previous
+    month and the first 2 MHVs from the following month.
 
     Parameters
     ----------
@@ -1220,7 +1270,7 @@ def remove_sr_curve(channel, timeseries, spline):
 
 def statistics(data):
     """Calculate average, standard deviation, minimum and maximum on given
-    trace, add them to a 'statistics'.
+    trace, add them to a 'statistics' object.
 
     Parameters
     ----------
