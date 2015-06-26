@@ -84,10 +84,11 @@ def output_k(allK, trace):
     stats = trace.stats
     date = stats.starttime
 
+    margin = "      "
     print "\n\n         ", stats.station_name.upper() + ","
-    print "      " + date.strftime("%B").upper() + "  " + str(date.year).upper()
-    print "      MODAYR  JULIAN   0    3    6    9     12   15   18   21HOUR  KSUM   AK"
-    print "              DAY\n"
+    print margin + date.strftime("%B").upper() + "  " + str(date.year).upper()
+    print margin + "MODAYR  JULIAN   0    3    6    9     12   15   18   21HOUR  KSUM   AK"
+    print margin + "        DAY\n"
 
     k = allK['k']
     hourBin = allK['hourblock']
@@ -95,31 +96,54 @@ def output_k(allK, trace):
 
     lastDay = julianDay[0]
     i = 0
+    day = date.day
+    lineInitialized = False
+    firstFour = True
+    valueCount = 0
     line = ""
 
+    # TODO - Why is the first line the only one with a value for hour 21?
+    # TODO - Calculate and add columns for KSUM and AK.
     for value in k:
         jd = julianDay[i]
         if jd == lastDay:
-            month = date.month
-            if month < 10:
-                month = " " + str(month)
+            value = str.rjust(str(value), 5, " ")
+
+            if lineInitialized:
+                # Values are grouped in columns of 4.
+                # Hours 0, 3, 6 and 9 are together.
+                # Hours 12, 15, 18 and 21 are together.
+                if firstFour:
+                    line = line + value
+                    valueCount += 1
+                    if valueCount == 3:
+                        firstFour = False
+                else:
+                    line = line + "  " + value
+                    firstFour = True
+
             else:
-                month = str(month)
+                # Lines begin data with 'MMDDYY  JJJ'
+                monthStr = str.rjust(str(date.month), 2, " ")
 
-            # TODO - day needs to increment
-            day = date.day
-            if day < 10:
-                day = " " + str(day)
-            else:
-                day = str(day)
+                dayStr = str.rjust(str(day), 2, " ")
 
-            year = str(date.year)
-            year = year[2:4]
+                yearStr = str.rjust(str(date.year)[2:4], 2, " ")
 
-            line = line + month + day + year + "   " + str(jd) + "    " + str(value)
+                jdStr = str.rjust(str(jd), 3, " ")
+
+                line = line + monthStr + dayStr + yearStr + "  " + jdStr
+                line = line + "  " + value
+
+                lineInitialized = True
+
         else:
-            print line
+            print margin + line
+            lineInitialized = False
+            day += 1
             line = ""
+            valueCount = 0
+            firstFour = True
 
         lastDay = jd
         i += 1
