@@ -28,6 +28,8 @@ class KUSGSAlgorithm(Algorithm):
     """
 
     def __init__(self, rangeLimit=2.0, distLimit=5.0):
+        print "Range Limit       :", rangeLimit, "standard deviations"
+        print "Distribution Limit:", distLimit, "standard deviations"
         Algorithm.__init__(self, inchannels=['H', 'E'],
                         outchannels=['H','H','H','H'])
 
@@ -69,7 +71,7 @@ class KUSGSAlgorithm(Algorithm):
         kVariationE = get_ks('E', timeseries, self.rangeLimit, self.distLimit)
 
         # Translate nT ranges into K values.
-        print kVariationH
+        # print kVariationH
         allK = translate(kVariationH, kVariationE)
         output_k(allK, kVariationH)
 
@@ -83,30 +85,31 @@ def output_k(allK, trace):
     """
     stats = trace.stats
     date = stats.starttime
+    day = date.day
+    month = date.month
+    year = date.year
 
     margin = "      "
-    print "\n\n         ", stats.station_name.upper() + ","
-    print margin + date.strftime("%B").upper() + "  " + str(date.year).upper()
-    print margin + "MODAYR  JULIAN   0    3    6    9     12   15   18   21HOUR  KSUM   AK"
-    print margin + "        DAY\n"
+
+    header = output_k_header(trace, margin)
 
     k = allK['k']
     hourBin = allK['hourblock']
     julianDay = allK['julianday']
 
-    lastDay = julianDay[0]
+    contents = ""
     i = 0
-    day = date.day
-    lineInitialized = False
     firstFour = True
-    valueCount = 0
     line = ""
+    lineInitialized = False
+    previousDay = julianDay[0]
+    valueCount = 0
 
-    # TODO - Why is the first line the only one with a value for hour 21?
     # TODO - Calculate and add columns for KSUM and AK.
     for value in k:
         jd = julianDay[i]
-        if jd == lastDay:
+
+        if jd == previousDay:
             value = str.rjust(str(value), 5, " ")
 
             if lineInitialized:
@@ -124,11 +127,11 @@ def output_k(allK, trace):
 
             else:
                 # Lines begin data with 'MMDDYY  JJJ'
-                monthStr = str.rjust(str(date.month), 2, " ")
+                monthStr = str.rjust(str(month), 2, " ")
 
                 dayStr = str.rjust(str(day), 2, " ")
 
-                yearStr = str.rjust(str(date.year)[2:4], 2, " ")
+                yearStr = str.rjust(str(year)[2:4], 2, " ")
 
                 jdStr = str.rjust(str(jd), 3, " ")
 
@@ -138,18 +141,55 @@ def output_k(allK, trace):
                 lineInitialized = True
 
         else:
-            print margin + line
+            if jd != 2:
+                value = str.rjust(str(value), 5, " ")
+                line = line + value
+
+            ksum = output_k_sum(line)
+            ak = "   ak"
+            contents = contents + margin + line + ksum + ak + "\n"
+
             lineInitialized = False
             day += 1
             line = ""
             valueCount = 0
             firstFour = True
 
-        lastDay = jd
+        previousDay = jd
         i += 1
 
+    print header + contents
     # print stats
     # print allK
+
+def output_k_header(trace, margin):
+    stats = trace.stats
+    date = stats.starttime
+
+    line = "\n\n         " + stats.station_name.upper() + ",\n"
+    line = line + margin + date.strftime("%B").upper()
+    line = line + "  " + str(date.year).upper() + "\n"
+    line = line + margin
+    line = line + "MODAYR  JULIAN   0    3    6    9"
+    line = line + "     12   15   18   21HOUR  KSUM   AK\n"
+    line = line + margin + "        DAY\n"
+
+    return line
+
+def output_k_sum(line):
+    zero = float(line[13:18])
+    three = float(line[18:23])
+    six = float(line[23:28])
+    nine = float(line[28:33])
+
+    twelve = float(line[35:40])
+    fifteen = float(line[40:45])
+    eighteen = float(line[45:50])
+    twentyone = float(line[50:55])
+
+    ksum = zero + three + six + nine + twelve + fifteen + eighteen + twentyone
+
+    return str.rjust(str(ksum), 10, " ")
 
 def clean_distribution(hour, minimum, maximum, monthAverage):
     """Clean out MHVs at the edges of the monthly distribution, which is done
