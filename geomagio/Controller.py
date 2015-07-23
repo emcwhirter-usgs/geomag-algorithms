@@ -14,6 +14,7 @@ import iaga2002
 import pcdcp
 
 from DeltaFAlgorithm import DeltaFAlgorithm
+from KUSGSAlgorithm import KUSGSAlgorithm
 from XYZAlgorithm import XYZAlgorithm
 
 
@@ -279,11 +280,14 @@ def main(args):
     else:
             print >> sys.stderr, "Missing required output directive"
 
-    if args.xyz is not None:
+    if args.deltaf is not None:
+        algorithm = DeltaFAlgorithm(informat=args.deltaf)
+    elif args.k is not None:
+        args.starttime, args.endtime = pad_months(args.starttime, args.endtime)
+        algorithm = KUSGSAlgorithm(rangeLimit=args.k[0], distLimit=args.k[1])
+    elif args.xyz is not None:
         algorithm = XYZAlgorithm(informat=args.xyz[0],
                 outformat=args.xyz[1])
-    elif args.deltaf is not None:
-        algorithm = DeltaFAlgorithm(informat=args.deltaf)
     else:
         # TODO get smarter on inchannels/outchannels since input doesn't always
         # need to use the --inchannels argument, but might (as in iaga2002),
@@ -310,6 +314,84 @@ def main(args):
     else:
         controller.run(args)
 
+
+def pad_days(starttime, endtime):
+    """Pad the current time window defined by starttime and endtime to include
+    the remainder of any hours to ensure complete the calendar days, then add
+    1 calendar day to the beginning and end of the window.
+
+    Parameters
+    ----------
+        starttime as a string {args.starttime}
+        endtime as a string {args.endtime}
+
+    Returns
+    -------
+        starttime as a string
+        endtime as a string
+    """
+    # K needs complete days and an extra day at the start and end of the
+    #   time-series.
+    oneDay = np.timedelta64(1, 'D')
+    oneMinute = np.timedelta64(1, 'm')
+    delta = 2 * oneDay - oneMinute
+
+    # Capture the rest of the day at the beginning, then add 1 full calendar
+    #   day of data.
+    start = np.datetime64(starttime)
+    start = np.datetime64(np.datetime_as_string(start, timezone='UTC')[:10])
+    starttime = np.datetime_as_string(start - oneDay, timezone='UTC')
+
+    # Capture the entire day from the end time, then add 1 full calendar
+    #   day of data.
+    end = np.datetime64(endtime)
+    end = np.datetime64(np.datetime_as_string(end, timezone='UTC')[:10])
+    endtime = np.datetime_as_string(end + delta, timezone='UTC')
+
+    return str(starttime), str(endtime)
+
+def pad_months(starttime, endtime):
+    """Pad the current time window defined by starttime and endtime to include
+    the remainder of any hours to ensure complete the calendar days, then
+    add 1 calendar day to the beginning and end of the window.
+
+    Parameters
+    ----------
+        starttime as a string {args.starttime}
+        endtime as a string {args.endtime}
+
+    Returns
+    -------
+        starttime as a string
+        endtime as a string
+    """
+    # K needs complete months of time-series data for statistics.
+    oneMinute = np.timedelta64(1, 'm')
+
+    # Capture the rest of the month at the beginning.
+    start = np.datetime64(starttime)
+    starttime = np.datetime_as_string(start, timezone='UTC')[:8] + "01T00:00:00Z"
+
+    # Capture the entire month from the end time.
+    # type = <type 'numpy.datetime64'>
+    end = np.datetime64(endtime)
+
+    # Numpy doesn't know how to add a month...so work-around.
+    month = int(np.datetime_as_string(end, timezone='UTC')[5:7])
+    if month < 10:
+        month = "0" + str(month+1)
+    elif month < 12:
+        month = str(month + 1)
+    else:
+        month = str("01")
+
+    end = np.datetime_as_string(end, timezone='UTC')[:5] + month + "-01T00:00:00Z"
+    end = np.datetime64(end)
+
+    endtime = np.datetime_as_string(end - oneMinute, timezone='UTC')
+    # end work-around
+
+    return starttime, str(endtime)
 
 def parse_args(args):
     """parse input arguments
@@ -438,13 +520,24 @@ def parse_args(args):
 
     # Algorithms group
     algorithm_group = parser.add_mutually_exclusive_group()
+
+    algorithm_group.add_argument('--deltaf',
+            choices=['geo', 'obs', 'obsd'],
+            help='Enter the geomagnetic orientation you want to read from')
+    algorithm_group.add_argument('--k',
+            nargs=2,
+            type=float,
+            help='Enter a range limit and distribution limit for eliminating' +
+                    ' mean hourly values (MHVs). Range limit is a floating' +
+                    ' point representing the number of standard devations in' +
+                    ' range each MHV is allowed to have. Distribution limit' +
+                    ' is a floating point representing the number of standard' +
+                    ' devations away from the monthly average to eliminate' +
+                    ' MHVs. Standard deviation is based on monthly statistics.')
     algorithm_group.add_argument('--xyz',
             nargs=2,
             choices=['geo', 'mag', 'obs', 'obsd'],
             help='Enter the geomagnetic orientation(s) you want to read from' +
                     ' and to respectfully.')
-    algorithm_group.add_argument('--deltaf',
-            choices=['geo', 'obs', 'obsd'],
-            help='Enter the geomagnetic orientation you want to read from')
 
     return parser.parse_args(args)
