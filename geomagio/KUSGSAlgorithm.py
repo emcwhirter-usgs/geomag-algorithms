@@ -106,6 +106,8 @@ def output_k(allK, trace):
     valueCount = 0
 
     # TODO - Calculate and add columns for KSUM and AK.
+    # TODO - Add newline after every 5 days
+    # TODO - Where is 31st day?
     for value in k:
         jd = julianDay[i]
 
