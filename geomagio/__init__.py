@@ -7,6 +7,7 @@ import StreamConverter
 from Algorithm import Algorithm
 from AlgorithmException import AlgorithmException
 from Controller import Controller
+from KUSGSAlgorithm import KUSGSAlgorithm
 from TimeseriesFactory import TimeseriesFactory
 from TimeseriesFactoryException import TimeseriesFactoryException
 import TimeseriesUtility
@@ -19,6 +20,7 @@ __all__ = [
     'ChannelConverter',
     'Controller',
     'DeltaFAlgorithm',
+    'KUSGSAlgorithm',
     'StreamConverter',
     'TimeseriesFactory',
     'TimeseriesFactoryException',
