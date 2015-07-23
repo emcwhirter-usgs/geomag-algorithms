@@ -2,6 +2,7 @@
 
 
 import argparse
+import numpy as np
 import sys
 from obspy.core import UTCDateTime
 from Algorithm import Algorithm
