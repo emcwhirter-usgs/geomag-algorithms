@@ -24,6 +24,9 @@ Use PCDCP formatted files for input and/or output.
 ### [DeltaF](./docs/DeltaF_usage.md) ###
 Calculate DeltaF from geographic, or observatory coordinates.
 
+### [K-USGS](./docs/KUSGS_usage.md) ###
+Calculate approved USGS version of K-Index. Some history behind K-USGS.
+
 ### [XYZ](./docs/XYZ_usage.md) ###
 Rotate data between coordinate systems. From HEZ or HDZ to XYZ and back.
 
