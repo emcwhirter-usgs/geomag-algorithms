@@ -389,10 +389,13 @@ def pad_months(starttime, endtime):
     end = np.datetime_as_string(end, timezone='UTC')[:5] + month + "-01T00:00:00Z"
     end = np.datetime64(end)
 
-    endtime = np.datetime_as_string(end - oneMinute, timezone='UTC')
+    endtime = str(np.datetime_as_string(end - oneMinute, timezone='UTC'))
     # end work-around
 
-    return starttime, str(endtime)
+    starttime = UTCDateTime(starttime)
+    endtime = UTCDateTime(endtime)
+
+    return starttime, endtime
 
 def parse_args(args):
     """parse input arguments
