@@ -3,7 +3,7 @@ Readme install dependencies
 ## Install ##
 
 We recommend using
-[virtual environments (http://docs.python-guide.org/en/latest/dev/virtualenvs/)][].
+[virtual environments (http://docs.python-guide.org/en/latest/dev/virtualenvs/)](http://docs.python-guide.org/en/latest/dev/virtualenvs/).
 
 Check out the [Mac](#mac) and [Windows](#windows) details below for more
 specific dependency information.
@@ -19,9 +19,6 @@ specific dependency information.
 
 The [Usage](readme_usage.md) page has more detailed instructions and examples.
 
-[virtual environments]: http://docs.python-guide.org/en/latest/dev/virtualenvs/
-
-
 ---
 ### Mac ###
 
@@ -34,7 +31,7 @@ The [Usage](readme_usage.md) page has more detailed instructions and examples.
         pip install numpy
 
 1. Install `node`, `git` and `python` (2.7.X).
-   On OS X, we recommend using [Homebrew (http://brew.sh/)][]
+   On OS X, we recommend using [Homebrew (http://brew.sh/)](http://brew.sh/)
 
         brew install node
         brew install git
@@ -54,30 +51,25 @@ The [Usage](readme_usage.md) page has more detailed instructions and examples.
 1. Close and re-open your terminal so that your new PATH is loaded.
    Make sure to navigate back to your `geomag-algorithms` project directory.
 
-[Homebrew]: http://brew.sh/
-
 ---
 ### Windows ###
 
 1. You will need a terminal tool for Windows.
-   [Git Bash (http://git-scm.com/download/win)][] was used to test
-   these steps, but [Cygwin (http://cygwin.com/install.html)][] or another
-   unix-like editor should work too.
+   [Git Bash (http://git-scm.com/download/win)](http://git-scm.com/download/win)
+   was used to test these steps, but
+   [Cygwin (http://cygwin.com/install.html)](http://cygwin.com/install.html)
+   or another unix-like editor should work too.
 
   - Choosing PATH environment: We recommend the __last option__ here to include
      Unix tools, but if you don't understand what that entails then use the
      _second option_ which still adds Git to your system PATH.
   - Besides that, all of the defaults should be sufficient.
 
-1. Install [Anaconda (http://continuum.io/downloads)][], which includes
-   `numpy`, `scipy` and `flake8`.
+1. Install [Anaconda (http://continuum.io/downloads)](http://continuum.io/downloads),
+   which includes `numpy`, `scipy` and `flake8`.
   - We recommend using _"Just Me"_ for the install to avoid potential admin
   issues.
 
 1. Run `python` to verify that Anaconda's version of Python is being used.
    If it isn't, update your PATH so that Conda's HOME is before any other
    versions of Python.
-
-[Git Bash]: http://git-scm.com/download/win
-[Cygwin]: http://cygwin.com/install.html
-[Anaconda]: http://continuum.io/downloads
