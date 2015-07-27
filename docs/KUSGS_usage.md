@@ -99,6 +99,24 @@ variation nano-Tesla (nT) value of the data onto a 0 to 9 integer scale. The
 For the Niemegk observatory, this means that a K variation below 5nT yields K=0,
 a K variation below 10nT yields K=1 and so on.
 
+Translation scale for all USGS observatories:
+
+    Obs Co-Latitude  K=9    K=8    K=7    K=6    K=5    K=4    K=3    K=2    K=1
+    BRW   20.81     2500   1650   1000    600    350    200    100     50     25
+    CMO   24.87     2500   1650   1000    600    350    200    100     50     25
+    SIT   29.72     1000    660    400    240    140     80     40     20     10
+    SHU   34.65      620    409    248    148     87     50     25     12      6
+    NEW   34.96      700    462    280    168     98     56     28     14      7
+    FRD   41.04      500    330    200    120     70     40     20     10      5
+    BOU   41.25      500    330    200    120     70     40     20     10      5
+    FRN   46.28      350    230    140     85     50     30     16      8      4
+    BSL   49.40      350    230    140     85     50     30     16      8      4
+    TUC   49.75      350    231    140     85     50     30     16      8      4
+    DLR   51.30      350    230    140     85     50     30     16      8      4
+    SJG   60.83      300    200    120     70     40     24     12      6      2
+    HON   68.53      300    200    120     70     40     24     12      6      2
+    GUA   85.26      300    200    120     70     40     24     12      6      2
+
 ### K Sum ###
 
 K Sum is one of the output parameters for validating daily outputs. It is the
