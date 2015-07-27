@@ -56,11 +56,18 @@ data to a group of _iaga2002_ formatted files in a "data-iaga" directory:
 
 There are flags to specify certain algorithms should be run against the data.
 
+#### K-USGS ####
+
+`--k {float} {float}`
+
+##### [K-USGS Usage](./docs/KUSGS_usage.md) #####
+Calculate approved USGS version of K-Index.
+
 #### XYZ ####
 
 `--xyz {geo, mag, obs, obsd} {geo, mag, obs, obsd}`
 
-#### [XYZ Usage](./docs/XYZ_usage.md) ####
+##### [XYZ Usage](./docs/XYZ_usage.md) #####
 Rotate data from HEZ or HDZ to XYZ and back.
 
 Extensive explanation of all input and output methods:
