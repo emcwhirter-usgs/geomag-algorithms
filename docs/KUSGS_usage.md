@@ -122,6 +122,36 @@ Translation scale for all USGS observatories:
 K Sum is one of the output parameters for validating daily outputs. It is the
 sum of the 8 K values within a given day after first truncating each of them.
 
+### Ak ###
+
+Ak is a scaled nT equivalent of the K sum based on the observatory.
+
+From SWPC's [Glossary of Solar-Terrestrial Terms](solar-terrestrial-glossary)
+
+    Ak is scaled from the 3-hourly K index according to the following table:
+    K      0     1     2     3     4     5     6     7     8     9
+    ak     0     3     7    15    27    48    80   140   240   400
+
+To convert these values to nT, divide the station’s lower limit for K=9 by 250.
+
+Using this conversion for all USGS observatories, we get:
+
+    Obs       K=0    K=1    K=2    K=3    K=4    K=5    K=6    K=7    K=8    K=9
+    BRW x10     0     30     70    150    270    480    800   1400   2400   4000
+    CMO x10     0     30     70    150    270    480    800   1400   2400   4000
+    SIT x4      0     12     28     60    108    192    320    560    960   1600
+    SHU x2.48   0      7     17     37     67    119    198    347    595    992
+    NEW x2.8    0      8     20     42     76    134    224    392    672   1120
+    FRD x2      0      6     14     30     54     96    160    280    480    800
+    BOU x2      0      6     14     30     54     96    160    280    480    800
+    FRN x1.4    0      4     10     21     38     67    112    196    336    560
+    BSL x1.4    0      4     10     21     38     67    112    196    336    560
+    TUC x1.4    0      4     10     21     38     67    112    196    336    560
+    DLR x1.4    0      4     10     21     38     67    112    196    336    560
+    SJG x1.2    0      4      8     18     32     58     96    168    288    480
+    HON x1.2    0      4      8     18     32     58     96    168    288    480
+    GUA x1.2    0      4      8     18     32     58     96    168    288    480
+
 
 ## Practical Considerations ##
 
@@ -162,3 +192,6 @@ Menvielle, N., 1995,
 Wilson, L.R. (1987),
   [An Evaluation of Digitially Derived K-Indices](https://www.jstage.jst.go.jp/article/jgg1949/39/2/39_2_97/_article),
   *J. Geomag. Geoelectr.*, **39**, pp 97-109 <a name="wilson-1987"></a>
+
+[Glossary of Solar-Terrestrial Terms](http://www.swpc.noaa.gov/sites/default/files/images/u2/Glossary.pdf)
+<a name="solar-terrestrial-glossary"></a>
