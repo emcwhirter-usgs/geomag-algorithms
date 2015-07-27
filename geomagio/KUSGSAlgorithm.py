@@ -148,7 +148,7 @@ def output_k(allK, trace):
                 line = line + value
 
             ksum = output_k_sum(line)
-            ak = "   ak"
+            ak = output_k_ak()
             contents = contents + margin + line + ksum + ak + "\n"
 
             lineInitialized = False
@@ -163,6 +163,47 @@ def output_k(allK, trace):
     print header + contents
     # print stats
     # print allK
+
+def output_k_ak():
+    """Converts K Sum into a scaled nT equivalent based on observatory.
+
+    Base scale:
+    K           0      1      2      3      4      5      6      7      8      9
+    ak          0      3      7     15     27     48     80    140    240    400
+
+    Observatory scale is determined by dividing K=9 value by 250.
+    USGS Observatory scales:
+    Obs       K=0    K=1    K=2    K=3    K=4    K=5    K=6    K=7    K=8    K=9
+      10.0 times base scale --> 2500 / 250 = 10.0
+    BRW         0     30     70    150    270    480    800   1400   2400   4000
+    CMO         0     30     70    150    270    480    800   1400   2400   4000
+      4.00 times base scale --> 1000 / 250 = 4.00
+    SIT         0     12     28     60    108    192    320    560    960   1600
+      2.48 times base scale --> 620 / 250 = 2.48
+    SHU         0      7     17     37     67    119    198    347    595    992
+      2.80 times base scale --> 700 / 250 = 2.80
+    NEW         0      8     20     42     76    134    224    392    672   1120
+      2.00 times base scale --> 500 / 250 = 2.00
+    FRD         0      6     14     30     54     96    160    280    480    800
+    BOU         0      6     14     30     54     96    160    280    480    800
+      1.40 times base scale --> 350 / 250 = 1.40
+    FRN         0      4     10     21     38     67    112    196    336    560
+    BSL         0      4     10     21     38     67    112    196    336    560
+    TUC         0      4     10     21     38     67    112    196    336    560
+    DLR         0      4     10     21     38     67    112    196    336    560
+      1.20 times base scale --> 300 / 250 = 1.20
+    SJG         0      4      8     18     32     58     96    168    288    480
+    HON         0      4      8     18     32     58     96    168    288    480
+    GUA         0      4      8     18     32     58     96    168    288    480
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+        String
+    """
+    return "   ak"
 
 def clean_distribution(hour, minimum, maximum, monthAverage):
     """Clean out MHVs at the edges of the monthly distribution, which is done
