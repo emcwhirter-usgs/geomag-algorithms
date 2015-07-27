@@ -164,20 +164,6 @@ def output_k(allK, trace):
     # print stats
     # print allK
 
-def output_k_header(trace, margin):
-    stats = trace.stats
-    date = stats.starttime
-
-    line = "\n\n         " + stats.station_name.upper() + ",\n"
-    line = line + margin + date.strftime("%B").upper()
-    line = line + "  " + str(date.year).upper() + "\n"
-    line = line + margin
-    line = line + "MODAYR  JULIAN   0    3    6    9"
-    line = line + "     12   15   18   21HOUR  KSUM   AK\n"
-    line = line + margin + "        DAY\n"
-
-    return line
-
 def clean_distribution(hour, minimum, maximum, monthAverage):
     """Clean out MHVs at the edges of the monthly distribution, which is done
     by elminiating any MHVs that are larger than maximum or smaller than
@@ -644,6 +630,34 @@ def get_traces(trace, interval='hours'):
         traces.append(localTrace)
 
     return traces
+
+def output_k_header(trace, margin):
+    """Create formatted header for K output file.
+
+    Parameters
+    ----------
+        trace : Trace <obspy.core.trac.Trace>
+            A time-series trace of data
+        margin : string
+            Spaces representing left margin
+
+    Returns
+    -------
+        String
+            Formatted string with complete header for K file
+    """
+    stats = trace.stats
+    date = stats.starttime
+
+    lines = "\n\n         " + stats.station_name.upper() + ",\n"
+    lines = lines + margin + date.strftime("%B").upper()
+    lines = lines + "  " + str(date.year).upper() + "\n"
+    lines = lines + margin
+    lines = lines + "MODAYR  JULIAN   0    3    6    9"
+    lines = lines + "     12   15   18   21HOUR  KSUM   AK\n"
+    lines = lines + margin + "        DAY\n"
+
+    return lines
 
 def output_k_sum(line):
     """Sum of the 8 values for a given day after truncating each value.
