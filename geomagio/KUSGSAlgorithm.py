@@ -80,8 +80,16 @@ class KUSGSAlgorithm(Algorithm):
         return out_stream
 
 def output_k(allK, trace):
-    """
+    """Output K values in the standard DKF (Intermagnet K) format.
+
     TODO: This should be a file output parameter
+
+    Parameters
+    ----------
+        allK : List
+            All K values for every 3 MHVs of every day in the month
+        trace : Trace <obspy.core.trac.Trace>
+
     """
     stats = trace.stats
     date = stats.starttime
@@ -101,11 +109,10 @@ def output_k(allK, trace):
     i = 0
     firstFour = True
     line = ""
+    lineCount = 0
     lineInitialized = False
     dayOfPreviousValue = julianDay[0]
     valueCount = 0
-
-    # TODO - Add newline after every 5 days
 
     for value in k:
         jd = julianDay[i]
@@ -137,6 +144,12 @@ def output_k(allK, trace):
             ksum = output_k_sum(line)
             ak = output_k_ak(line, trace)
             contents = contents + margin + line + ksum + ak + "\n"
+
+            # Add an empty line after every 5 lines of data
+            lineCount += 1
+            if lineCount >= 5:
+                contents = contents + "\n"
+                lineCount = 0
 
             # Initialize the next line here since we have the first value.
             begin = output_k_newline(month, day, year, jd)
