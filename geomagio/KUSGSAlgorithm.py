@@ -73,13 +73,13 @@ class KUSGSAlgorithm(Algorithm):
         # Translate nT ranges into K values.
         # print kVariationH
         allK = translate(kVariationH, kVariationE)
-        output_k(allK, kVariationH)
+        output_k(allK)
 
         out_stream = timeseries
 
         return out_stream
 
-def output_k(allK, trace):
+def output_k(allK):
     """Output K values in the standard DKF (Intermagnet K) format.
 
     TODO: This should be a file output parameter
@@ -88,10 +88,12 @@ def output_k(allK, trace):
     ----------
         allK : List
             All K values for every 3 MHVs of every day in the month
-        trace : Trace <obspy.core.trac.Trace>
-
     """
-    stats = trace.stats
+    k = allK['k']
+    hourBin = allK['hourblock']
+    julianDay = allK['julianday']
+    stats = allK['stats']
+
     date = stats.starttime
     day = date.day
     month = date.month
@@ -101,10 +103,6 @@ def output_k(allK, trace):
     margin = "      "
 
     header = output_k_header(station, date, margin)
-
-    k = allK['k']
-    hourBin = allK['hourblock']
-    julianDay = allK['julianday']
 
     contents = ""
     i = 0
@@ -143,7 +141,7 @@ def output_k(allK, trace):
 
         else:
             ksum = output_k_sum(line)
-            ak = output_k_ak(line, trace)
+            ak = output_k_ak(line, stats)
             contents = contents + margin + line + ksum + ak + "\n"
 
             # Add an empty line after every 5 lines of data
@@ -164,7 +162,7 @@ def output_k(allK, trace):
         i += 1
 
     ksum = output_k_sum(line)
-    ak = output_k_ak(line, trace)
+    ak = output_k_ak(line, stats)
     lastLine = margin + line + ksum + ak
     print header + contents + lastLine
     # print stats
@@ -195,7 +193,7 @@ def output_k_newline(month, day, year, jd):
 
     return monthStr + dayStr + yearStr + "  " + jdStr + "  "
 
-def output_k_ak(line, trace):
+def output_k_ak(line, stats):
     """Converts K values into a scaled nT equivalent based on observatory.
 
     Parameters
@@ -203,14 +201,15 @@ def output_k_ak(line, trace):
         line : string
             Line of input for a K file, includes the 8 decimal values for
             the day
-        trace : Trace <obspy.core.trac.Trace>
+        stats : List
+            From obspy.core.trac.Trace.stats
 
     Returns
     -------
         String
             Ak index formatted as string
     """
-    station = trace.stats.station
+    station = stats.station
 
     zero = translate_table_ak(output_k_0(line), station)
     three = translate_table_ak(output_k_3(line), station)
