@@ -102,66 +102,84 @@ def output_k(allK, trace):
     firstFour = True
     line = ""
     lineInitialized = False
-    previousDay = julianDay[0]
+    dayOfPreviousValue = julianDay[0]
     valueCount = 0
 
     # TODO - Add newline after every 5 days
-    # TODO - Where is 31st day?
+
     for value in k:
         jd = julianDay[i]
+        value = str.rjust(str(value), 5, " ")
 
-        if jd == previousDay:
-            value = str.rjust(str(value), 5, " ")
+        if jd == dayOfPreviousValue:
+            begin = ""
+            space = ""
 
             if lineInitialized:
-                # Values are grouped in columns of 4.
-                # Hours 0, 3, 6 and 9 are together.
-                # Hours 12, 15, 18 and 21 are together.
                 if firstFour:
-                    line = line + value
+                    # Values are grouped in columns of 4.
+                    # Hours 0, 3, 6 and 9 are together.
                     valueCount += 1
                     if valueCount == 3:
                         firstFour = False
                 else:
-                    line = line + "  " + value
+                    # Hours 12, 15, 18 and 21 are together.
+                    space = "  "
                     firstFour = True
 
             else:
-                # Lines begin data with 'MMDDYY  JJJ'
-                monthStr = str.rjust(str(month), 2, " ")
-
-                dayStr = str.rjust(str(day), 2, " ")
-
-                yearStr = str.rjust(str(year)[2:4], 2, " ")
-
-                jdStr = str.rjust(str(jd), 3, " ")
-
-                line = line + monthStr + dayStr + yearStr + "  " + jdStr
-                line = line + "  " + value
-
+                begin = output_k_newline(month, day, year, jd)
                 lineInitialized = True
 
-        else:
-            if jd != 2:
-                value = str.rjust(str(value), 5, " ")
-                line = line + value
+            line = line + space + begin + value
 
+        else:
             ksum = output_k_sum(line)
             ak = output_k_ak(line, trace)
             contents = contents + margin + line + ksum + ak + "\n"
 
-            lineInitialized = False
+            # Initialize the next line here since we have the first value.
+            begin = output_k_newline(month, day, year, jd)
+            line = begin + value
+
             day += 1
-            line = ""
             valueCount = 0
             firstFour = True
 
-        previousDay = jd
+        dayOfPreviousValue = jd
         i += 1
 
-    print header + contents
+    ksum = output_k_sum(line)
+    ak = output_k_ak(line, trace)
+    lastLine = margin + line + ksum + ak
+    print header + contents + lastLine
     # print stats
     # print allK
+
+def output_k_newline(month, day, year, jd):
+    """Format the beginning of a line for a k file.
+
+    Parameters
+    ----------
+        month : Integer
+            Current month of the data
+        day : Integer
+            Current day of month of the data
+        year :
+            Current year of the data
+        jd :
+            Current julian day of the data
+
+    Returns
+        String
+            Formatted string for new line of a k file.
+    """
+    monthStr = str.rjust(str(month), 2, " ")
+    dayStr = str.rjust(str(day), 2, " ")
+    yearStr = str.rjust(str(year)[2:4], 2, " ")
+    jdStr = str.rjust(str(jd), 3, " ")
+
+    return monthStr + dayStr + yearStr + "  " + jdStr + "  "
 
 def output_k_ak(line, trace):
     """Converts K values into a scaled nT equivalent based on observatory.
