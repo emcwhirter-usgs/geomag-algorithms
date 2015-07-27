@@ -6,8 +6,11 @@ to Edge server input.
 
 #### EDGE ####
 
-`--input-edge HOST PORT`
-Specify an IP address or host name where your Edge lives along with a port.
+`--input-edge HOST`
+Specify an IP address or host name where your Edge lives.
+
+`--input-edge-port`
+Optional parameter, port defaults to 2060.
 
 #### Iaga2002 ####
 
@@ -58,8 +61,11 @@ Several methods exist for retrieving and storing data.
 
 #### Edge Server ####
 
-`--input-edge HOST PORT`
-Specify an IP address or host name where your Edge lives along with a port.
+`--input-edge HOST`
+Specify an IP address or host name where your Edge lives.
+
+`--input-edge-port`
+Optional parameter, port defaults to 2060
 
 #### Single File ####
 
