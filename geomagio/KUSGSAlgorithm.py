@@ -839,10 +839,6 @@ def output_k_header(station, date, margin):
         String
             Formatted string with complete header for K file
     """
-    # stats = trace.stats
-    # date = stats.starttime
-
-    # lines = "\n\n         " + stats.station_name.upper() + ",\n"
     lines = "\n\n         " + station.upper() + ",\n"
     lines = lines + margin + date.strftime("%B").upper()
     lines = lines + "  " + str(date.year).upper() + "\n"
@@ -1611,14 +1607,16 @@ def translate(kVariationH, kVariationE):
     if len(kVariationE) != len(kVariationH):
         raise Exception('Must have the same amount of H and E data.')
 
-    if kVariationH.stats.npts % MINUTESPERDAY != 0:
+    stats = kVariationH.stats
+
+    if stats.npts % MINUTESPERDAY != 0:
         raise Exception('Must have full days of minute data.')
 
     binCount = 1    # Number of bins; need to average 3 bins together
     binSize = 60    # 1 Hour of 1-Minute data
     count = 1       # Count within each bin
     hourBlock = 0   # Specify which daily 3-hour block: 0, 3, 6, 9, 12, 18, 21
-    julianDay = kVariationH.stats.starttime.julday
+    julianDay = stats.starttime.julday
     kHour = []      # Keep track of hour block: 0, 3, 6, 9, 12, 18, 21
     kJulianDay = [] # Keep track of Julian Day
     kValue = []     # Keep track of K value
@@ -1627,7 +1625,7 @@ def translate(kVariationH, kVariationE):
     maxH = -999
     minE = 999
     minH = 999
-    station = kVariationH.stats.station
+    station = stats.station
 
     for currentH in kVariationH:
         if currentH > maxH:
@@ -1681,7 +1679,7 @@ def translate(kVariationH, kVariationE):
         count += 1
         i += 1
 
-    return {'julianday': kJulianDay, 'hourblock': kHour, 'k': kValue}
+    return {'julianday': kJulianDay, 'hourblock': kHour, 'k': kValue, 'stats': stats}
 
 def translate_table(rangeNT, station):
     """Translate nT range for 3 hour bin based on K value table from Niemegk
