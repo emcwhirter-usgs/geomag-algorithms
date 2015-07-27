@@ -126,7 +126,7 @@ sum of the 8 K values within a given day after first truncating each of them.
 
 Ak is a scaled nT equivalent of the K sum based on the observatory.
 
-From SWPC's [Glossary of Solar-Terrestrial Terms](solar-terrestrial-glossary)
+From SWPC's [Glossary of Solar-Terrestrial Terms](#solar-terrestrial-glossary)
 
     Ak is scaled from the 3-hourly K index according to the following table:
     K      0     1     2     3     4     5     6     7     8     9
