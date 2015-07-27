@@ -105,7 +105,6 @@ def output_k(allK, trace):
     previousDay = julianDay[0]
     valueCount = 0
 
-    # TODO - Calculate and add columns for KSUM and AK.
     # TODO - Add newline after every 5 days
     # TODO - Where is 31st day?
     for value in k:
@@ -148,7 +147,7 @@ def output_k(allK, trace):
                 line = line + value
 
             ksum = output_k_sum(line)
-            ak = output_k_ak()
+            ak = output_k_ak(line, trace)
             contents = contents + margin + line + ksum + ak + "\n"
 
             lineInitialized = False
@@ -164,46 +163,37 @@ def output_k(allK, trace):
     # print stats
     # print allK
 
-def output_k_ak():
-    """Converts K Sum into a scaled nT equivalent based on observatory.
-
-    Base scale:
-    K           0      1      2      3      4      5      6      7      8      9
-    ak          0      3      7     15     27     48     80    140    240    400
-
-    Observatory scale is determined by dividing K=9 value by 250.
-    USGS Observatory scales:
-    Obs       K=0    K=1    K=2    K=3    K=4    K=5    K=6    K=7    K=8    K=9
-      10.0 times base scale --> 2500 / 250 = 10.0
-    BRW         0     30     70    150    270    480    800   1400   2400   4000
-    CMO         0     30     70    150    270    480    800   1400   2400   4000
-      4.00 times base scale --> 1000 / 250 = 4.00
-    SIT         0     12     28     60    108    192    320    560    960   1600
-      2.48 times base scale --> 620 / 250 = 2.48
-    SHU         0      7     17     37     67    119    198    347    595    992
-      2.80 times base scale --> 700 / 250 = 2.80
-    NEW         0      8     20     42     76    134    224    392    672   1120
-      2.00 times base scale --> 500 / 250 = 2.00
-    FRD         0      6     14     30     54     96    160    280    480    800
-    BOU         0      6     14     30     54     96    160    280    480    800
-      1.40 times base scale --> 350 / 250 = 1.40
-    FRN         0      4     10     21     38     67    112    196    336    560
-    BSL         0      4     10     21     38     67    112    196    336    560
-    TUC         0      4     10     21     38     67    112    196    336    560
-    DLR         0      4     10     21     38     67    112    196    336    560
-      1.20 times base scale --> 300 / 250 = 1.20
-    SJG         0      4      8     18     32     58     96    168    288    480
-    HON         0      4      8     18     32     58     96    168    288    480
-    GUA         0      4      8     18     32     58     96    168    288    480
+def output_k_ak(line, trace):
+    """Converts K values into a scaled nT equivalent based on observatory.
 
     Parameters
     ----------
+        line : string
+            Line of input for a K file, includes the 8 decimal values for
+            the day
+        trace : Trace <obspy.core.trac.Trace>
 
     Returns
     -------
         String
+            Ak index formatted as string
     """
-    return "   ak"
+    station = trace.stats.station
+
+    zero = translate_table_ak(output_k_0(line), station)
+    three = translate_table_ak(output_k_3(line), station)
+    six = translate_table_ak(output_k_6(line), station)
+    nine = translate_table_ak(output_k_9(line), station)
+
+    twelve = translate_table_ak(output_k_12(line), station)
+    fifteen = translate_table_ak(output_k_15(line), station)
+    eighteen = translate_table_ak(output_k_18(line), station)
+    twentyone = translate_table_ak(output_k_21(line), station)
+
+    akIndex = (zero + three + six + nine + twelve + fifteen + eighteen + twentyone) / 8.0
+    akIndex = str(int(akIndex))
+
+    return str.rjust(str(akIndex), 7, " ")
 
 def clean_distribution(hour, minimum, maximum, monthAverage):
     """Clean out MHVs at the edges of the monthly distribution, which is done
@@ -672,6 +662,134 @@ def get_traces(trace, interval='hours'):
 
     return traces
 
+def output_k_0(line):
+    """Find the 0-2 hour K index given a single line.
+
+    Parameters
+    ----------
+        line : string
+            Line of input for a K file, includes the 8 decimal values for
+            the day
+
+    Returns
+    -------
+        Integer
+            Truncated K value.
+    """
+    return int(float(line[13:18]))
+
+def output_k_3(line):
+    """Find the 3-5 hour K index given a single line.
+
+    Parameters
+    ----------
+        line : string
+            Line of input for a K file, includes the 8 decimal values for
+            the day
+
+    Returns
+    -------
+        Integer
+            Truncated K value.
+    """
+    return int(float(line[18:23]))
+
+def output_k_6(line):
+    """Find the 6-8 hour K index given a single line.
+
+    Parameters
+    ----------
+        line : string
+            Line of input for a K file, includes the 8 decimal values for
+            the day
+
+    Returns
+    -------
+        Integer
+            Truncated K value.
+    """
+    return int(float(line[23:28]))
+
+def output_k_9(line):
+    """Find the 9-11 hour K index given a single line.
+
+    Parameters
+    ----------
+        line : string
+            Line of input for a K file, includes the 8 decimal values for
+            the day
+
+    Returns
+    -------
+        Integer
+            Truncated K value.
+    """
+    return int(float(line[28:33]))
+
+def output_k_12(line):
+    """Find the 12-14 hour K index given a single line.
+
+    Parameters
+    ----------
+        line : string
+            Line of input for a K file, includes the 8 decimal values for
+            the day
+
+    Returns
+    -------
+        Integer
+            Truncated K value.
+    """
+    return int(float(line[35:40]))
+
+def output_k_15(line):
+    """Find the 15-17 hour K index given a single line.
+
+    Parameters
+    ----------
+        line : string
+            Line of input for a K file, includes the 8 decimal values for
+            the day
+
+    Returns
+    -------
+        Integer
+            Truncated K value.
+    """
+    return int(float(line[40:45]))
+
+def output_k_18(line):
+    """Find the 18-20 hour K index given a single line.
+
+    Parameters
+    ----------
+        line : string
+            Line of input for a K file, includes the 8 decimal values for
+            the day
+
+    Returns
+    -------
+        Integer
+            Truncated K value.
+    """
+    return int(float(line[45:50]))
+
+def output_k_21(line):
+    """Find the 21-23 hour K index given a single line.
+
+    Parameters
+    ----------
+        line : string
+            Line of input for a K file, includes the 8 decimal values for
+            the day
+
+    Returns
+    -------
+        Integer
+            Truncated K value.
+    """
+    return int(float(line[50:55]))
+
 def output_k_header(trace, margin):
     """Create formatted header for K output file.
 
@@ -714,19 +832,19 @@ def output_k_sum(line):
         String
             Formatted string ready for output to K file.
     """
-    zero = int(float(line[13:18]))
-    three = int(float(line[18:23]))
-    six = int(float(line[23:28]))
-    nine = int(float(line[28:33]))
+    zero = output_k_0(line)
+    three = output_k_3(line)
+    six = output_k_6(line)
+    nine = output_k_9(line)
 
-    twelve = int(float(line[35:40]))
-    fifteen = int(float(line[40:45]))
-    eighteen = int(float(line[45:50]))
-    twentyone = int(float(line[50:55]))
+    twelve = output_k_12(line)
+    fifteen = output_k_15(line)
+    eighteen = output_k_18(line)
+    twentyone = output_k_21(line)
 
     ksum = zero + three + six + nine + twelve + fifteen + eighteen + twentyone
 
-    return str.rjust(str(ksum), 10, " ")
+    return str.rjust(str(ksum), 8, " ")
 
 def plot_all(months, days, hours):
     """Plot montly, daily, and hourly statistics before and after cleaning.
@@ -1726,3 +1844,226 @@ def translate_table(rangeNT, station):
             k = 9
 
     return k
+
+def translate_table_ak(k, station):
+    """Translate K values into a scaled nT equivalent based on observatory.
+
+    Base scale:
+    K           0      1      2      3      4      5      6      7      8      9
+    ak          0      3      7     15     27     48     80    140    240    400
+
+    Observatory scale is determined by dividing K=9 value by 250.
+    USGS Observatory scales:
+    Obs       K=0    K=1    K=2    K=3    K=4    K=5    K=6    K=7    K=8    K=9
+      10.0 times base scale --> 2500 / 250 = 10.0
+    BRW         0     30     70    150    270    480    800   1400   2400   4000
+    CMO         0     30     70    150    270    480    800   1400   2400   4000
+      4.00 times base scale --> 1000 / 250 = 4.00
+    SIT         0     12     28     60    108    192    320    560    960   1600
+      2.48 times base scale --> 620 / 250 = 2.48
+    SHU         0      7     17     37     67    119    198    347    595    992
+      2.80 times base scale --> 700 / 250 = 2.80
+    NEW         0      8     20     42     76    134    224    392    672   1120
+      2.00 times base scale --> 500 / 250 = 2.00
+    FRD         0      6     14     30     54     96    160    280    480    800
+    BOU         0      6     14     30     54     96    160    280    480    800
+      1.40 times base scale --> 350 / 250 = 1.40
+    FRN         0      4     10     21     38     67    112    196    336    560
+    BSL         0      4     10     21     38     67    112    196    336    560
+    TUC         0      4     10     21     38     67    112    196    336    560
+    DLR         0      4     10     21     38     67    112    196    336    560
+      1.20 times base scale --> 300 / 250 = 1.20
+    SJG         0      4      8     18     32     58     96    168    288    480
+    HON         0      4      8     18     32     58     96    168    288    480
+    GUA         0      4      8     18     32     58     96    168    288    480
+
+    Parameters
+    ----------
+        k : Integer
+            1 of the 8 daily K values, 0 to 9
+        station : string
+            3-Letter observatory code
+
+    Returns
+    -------
+        Integer
+            ak value
+    """
+    if station == 'BRW' or station == 'CMO':
+        if k < 1:
+            ak = 0
+        elif k < 2:
+            ak = 30
+        elif k < 3:
+            ak = 70
+        elif k < 4:
+            ak = 150
+        elif k < 5:
+            ak = 270
+        elif k < 6:
+            ak = 480
+        elif k < 7:
+            ak = 800
+        elif k < 8:
+            ak = 1400
+        elif k < 9:
+            ak = 2400
+        else:
+            ak = 4000
+
+    elif station == 'SIT':
+        if k < 1:
+            ak = 0
+        elif k < 2:
+            ak = 12
+        elif k < 3:
+            ak = 28
+        elif k < 4:
+            ak = 60
+        elif k < 5:
+            ak = 108
+        elif k < 6:
+            ak = 192
+        elif k < 7:
+            ak = 320
+        elif k < 8:
+            ak = 560
+        elif k < 9:
+            ak = 960
+        else:
+            ak = 1600
+
+    elif station == 'SHU':
+        if k < 1:
+            ak = 0
+        elif k < 2:
+            ak = 7
+        elif k < 3:
+            ak = 17
+        elif k < 4:
+            ak = 37
+        elif k < 5:
+            ak = 67
+        elif k < 6:
+            ak = 119
+        elif k < 7:
+            ak = 198
+        elif k < 8:
+            ak = 347
+        elif k < 9:
+            ak = 595
+        else:
+            ak = 992
+
+    elif station == 'NEW':
+        if k < 1:
+            ak = 0
+        elif k < 2:
+            ak = 8
+        elif k < 3:
+            ak = 20
+        elif k < 4:
+            ak = 42
+        elif k < 5:
+            ak = 76
+        elif k < 6:
+            ak = 134
+        elif k < 7:
+            ak = 224
+        elif k < 8:
+            ak = 392
+        elif k < 9:
+            ak = 672
+        else:
+            ak = 1120
+
+    elif station == 'BOU' or station == 'FRD':
+        if k < 1:
+            ak = 0
+        elif k < 2:
+            ak = 6
+        elif k < 3:
+            ak = 14
+        elif k < 4:
+            ak = 30
+        elif k < 5:
+            ak = 54
+        elif k < 6:
+            ak = 96
+        elif k < 7:
+            ak = 160
+        elif k < 8:
+            ak = 280
+        elif k < 9:
+            ak = 480
+        else:
+            ak = 800
+
+    elif station == 'FRN' or station == 'BSL' or station == 'TUC' \
+                          or station == 'DLR':
+        if k < 1:
+            ak = 0
+        elif k < 2:
+            ak = 4
+        elif k < 3:
+            ak = 10
+        elif k < 4:
+            ak = 21
+        elif k < 5:
+            ak = 38
+        elif k < 6:
+            ak = 67
+        elif k < 7:
+            ak = 112
+        elif k < 8:
+            ak = 196
+        elif k < 9:
+            ak = 336
+        else:
+            ak = 560
+
+    elif station == 'SJG' or station == 'HON' or station == 'GUA':
+        if k < 1:
+            ak = 0
+        elif k < 2:
+            ak = 4
+        elif k < 3:
+            ak = 8
+        elif k < 4:
+            ak = 18
+        elif k < 5:
+            ak = 32
+        elif k < 6:
+            ak = 58
+        elif k < 7:
+            ak = 96
+        elif k < 8:
+            ak = 168
+        elif k < 9:
+            ak = 288
+        else:
+            ak = 480
+
+    else: # Default, base scale
+        if k < 1:
+            ak = 0
+        elif k < 2:
+            ak = 3
+        elif k < 3:
+            ak = 7
+        elif k < 4:
+            ak = 15
+        elif k < 5:
+            ak = 27
+        elif k < 6:
+            ak = 48
+        elif k < 7:
+            ak = 80
+        elif k < 8:
+            ak = 140
+        elif k < 9:
+            ak = 240
+        else:
+            ak = 400
+
+    return ak

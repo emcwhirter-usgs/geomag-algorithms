@@ -126,9 +126,9 @@ sum of the 8 K values within a given day after first truncating each of them.
 
 Ak is a scaled nT equivalent of the K sum based on the observatory.
 
-From SWPC's [Glossary of Solar-Terrestrial Terms](#solar-terrestrial-glossary)
+From SWPC's [Glossary of Solar-Terrestrial Terms](#solar-terrestrial-glossary):
 
-    Ak is scaled from the 3-hourly K index according to the following table:
+    "ak" is scaled from the 3-hourly K index according to the following table:
     K      0     1     2     3     4     5     6     7     8     9
     ak     0     3     7    15    27    48    80   140   240   400
 
@@ -136,7 +136,7 @@ To convert these values to nT, divide the station’s lower limit for K=9 by 250
 
 Using this conversion for all USGS observatories, we get:
 
-    Obs       K=0    K=1    K=2    K=3    K=4    K=5    K=6    K=7    K=8    K=9
+    Obs scale K=0    K=1    K=2    K=3    K=4    K=5    K=6    K=7    K=8    K=9
     BRW x10     0     30     70    150    270    480    800   1400   2400   4000
     CMO x10     0     30     70    150    270    480    800   1400   2400   4000
     SIT x4      0     12     28     60    108    192    320    560    960   1600
@@ -151,6 +151,8 @@ Using this conversion for all USGS observatories, we get:
     SJG x1.2    0      4      8     18     32     58     96    168    288    480
     HON x1.2    0      4      8     18     32     58     96    168    288    480
     GUA x1.2    0      4      8     18     32     58     96    168    288    480
+
+Ak index is defined as the average of the 8 "ak" values for a given day.
 
 
 ## Practical Considerations ##
