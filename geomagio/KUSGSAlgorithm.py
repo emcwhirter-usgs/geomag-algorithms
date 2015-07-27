@@ -79,153 +79,6 @@ class KUSGSAlgorithm(Algorithm):
 
         return out_stream
 
-def output_k(allK):
-    """Output K values in the standard DKF (Intermagnet K) format.
-
-    TODO: This should be a file output parameter
-
-    Parameters
-    ----------
-        allK : List
-            All K values for every 3 MHVs of every day in the month
-    """
-    k = allK['k']
-    hourBin = allK['hourblock']
-    julianDay = allK['julianday']
-    stats = allK['stats']
-
-    date = stats.starttime
-    day = date.day
-    month = date.month
-    year = date.year
-    station = stats.station_name
-
-    margin = "      "
-
-    header = output_k_header(station, date, margin)
-
-    contents = ""
-    i = 0
-    firstFour = True
-    line = ""
-    lineCount = 0
-    lineInitialized = False
-    dayOfPreviousValue = julianDay[0]
-    valueCount = 0
-
-    for value in k:
-        jd = julianDay[i]
-        value = str.rjust(str(value), 5, " ")
-
-        if jd == dayOfPreviousValue:
-            begin = ""
-            space = ""
-
-            if lineInitialized:
-                if firstFour:
-                    # Values are grouped in columns of 4.
-                    # Hours 0, 3, 6 and 9 are together.
-                    valueCount += 1
-                    if valueCount == 3:
-                        firstFour = False
-                else:
-                    # Hours 12, 15, 18 and 21 are together.
-                    space = "  "
-                    firstFour = True
-
-            else:
-                begin = output_k_newline(month, day, year, jd)
-                lineInitialized = True
-
-            line = line + space + begin + value
-
-        else:
-            ksum = output_k_sum(line)
-            ak = output_k_ak(line, stats)
-            contents = contents + margin + line + ksum + ak + "\n"
-
-            # Add an empty line after every 5 lines of data
-            lineCount += 1
-            if lineCount >= 5:
-                contents = contents + "\n"
-                lineCount = 0
-
-            # Initialize the next line here since we have the first value.
-            begin = output_k_newline(month, day, year, jd)
-            line = begin + value
-
-            day += 1
-            valueCount = 0
-            firstFour = True
-
-        dayOfPreviousValue = jd
-        i += 1
-
-    ksum = output_k_sum(line)
-    ak = output_k_ak(line, stats)
-    lastLine = margin + line + ksum + ak
-    print header + contents + lastLine
-    # print stats
-    # print allK
-
-def output_k_newline(month, day, year, jd):
-    """Format the beginning of a line for a k file.
-
-    Parameters
-    ----------
-        month : Integer
-            Current month of the data
-        day : Integer
-            Current day of month of the data
-        year :
-            Current year of the data
-        jd :
-            Current julian day of the data
-
-    Returns
-        String
-            Formatted string for new line of a k file.
-    """
-    monthStr = str.rjust(str(month), 2, " ")
-    dayStr = str.rjust(str(day), 2, " ")
-    yearStr = str.rjust(str(year)[2:4], 2, " ")
-    jdStr = str.rjust(str(jd), 3, " ")
-
-    return monthStr + dayStr + yearStr + "  " + jdStr + "  "
-
-def output_k_ak(line, stats):
-    """Converts K values into a scaled nT equivalent based on observatory.
-
-    Parameters
-    ----------
-        line : string
-            Line of input for a K file, includes the 8 decimal values for
-            the day
-        stats : List
-            From obspy.core.trac.Trace.stats
-
-    Returns
-    -------
-        String
-            Ak index formatted as string
-    """
-    station = stats.station
-
-    zero = translate_table_ak(output_k_0(line), station)
-    three = translate_table_ak(output_k_3(line), station)
-    six = translate_table_ak(output_k_6(line), station)
-    nine = translate_table_ak(output_k_9(line), station)
-
-    twelve = translate_table_ak(output_k_12(line), station)
-    fifteen = translate_table_ak(output_k_15(line), station)
-    eighteen = translate_table_ak(output_k_18(line), station)
-    twentyone = translate_table_ak(output_k_21(line), station)
-
-    akIndex = (zero + three + six + nine + twelve + fifteen + eighteen + twentyone) / 8.0
-    akIndex = str(int(akIndex))
-
-    return str.rjust(str(akIndex), 7, " ")
-
 def clean_distribution(hour, minimum, maximum, monthAverage):
     """Clean out MHVs at the edges of the monthly distribution, which is done
     by elminiating any MHVs that are larger than maximum or smaller than
@@ -693,6 +546,95 @@ def get_traces(trace, interval='hours'):
 
     return traces
 
+def output_k(allK):
+    """Output K values in the standard DKF (Intermagnet K) format.
+
+    TODO: This should be a file output parameter
+
+    Parameters
+    ----------
+        allK : List
+            All K values for every 3 MHVs of every day in the month
+    """
+    k = allK['k']
+    hourBin = allK['hourblock']
+    julianDay = allK['julianday']
+    stats = allK['stats']
+
+    date = stats.starttime
+    day = date.day
+    month = date.month
+    year = date.year
+    station = stats.station_name
+
+    margin = "      "
+
+    header = output_k_header(station, date, margin)
+
+    contents = ""
+    i = 0
+    firstFour = True
+    line = ""
+    lineCount = 0
+    lineInitialized = False
+    dayOfPreviousValue = julianDay[0]
+    valueCount = 0
+
+    for value in k:
+        jd = julianDay[i]
+        value = str.rjust(str(value), 5, " ")
+
+        if jd == dayOfPreviousValue:
+            begin = ""
+            space = ""
+
+            if lineInitialized:
+                if firstFour:
+                    # Values are grouped in columns of 4.
+                    # Hours 0, 3, 6 and 9 are together.
+                    valueCount += 1
+                    if valueCount == 3:
+                        firstFour = False
+                else:
+                    # Hours 12, 15, 18 and 21 are together.
+                    space = "  "
+                    firstFour = True
+
+            else:
+                begin = output_k_newline(month, day, year, jd)
+                lineInitialized = True
+
+            line = line + space + begin + value
+
+        else:
+            ksum = output_k_sum(line)
+            ak = output_k_ak(line, stats)
+            contents = contents + margin + line + ksum + ak + "\n"
+
+            # Add an empty line after every 5 lines of data
+            lineCount += 1
+            if lineCount >= 5:
+                contents = contents + "\n"
+                lineCount = 0
+
+            # Initialize the next line here since we have the first value.
+            begin = output_k_newline(month, day, year, jd)
+            line = begin + value
+
+            day += 1
+            valueCount = 0
+            firstFour = True
+
+        dayOfPreviousValue = jd
+        i += 1
+
+    ksum = output_k_sum(line)
+    ak = output_k_ak(line, stats)
+    lastLine = margin + line + ksum + ak
+    print header + contents + lastLine
+    # print stats
+    # print allK
+
 def output_k_0(line):
     """Find the 0-2 hour K index given a single line.
 
@@ -821,6 +763,41 @@ def output_k_21(line):
     """
     return int(float(line[50:55]))
 
+def output_k_ak(line, stats):
+    """Converts K values into a scaled nT equivalent based on observatory.
+
+    Parameters
+    ----------
+        line : string
+            Line of input for a K file, includes the 8 decimal values for
+            the day
+        stats : List
+            From obspy.core.trac.Trace.stats
+
+    Returns
+    -------
+        String
+            Ak index formatted as string
+    """
+    station = stats.station
+
+    zero = translate_table_ak(output_k_0(line), station)
+    three = translate_table_ak(output_k_3(line), station)
+    six = translate_table_ak(output_k_6(line), station)
+    nine = translate_table_ak(output_k_9(line), station)
+
+    twelve = translate_table_ak(output_k_12(line), station)
+    fifteen = translate_table_ak(output_k_15(line), station)
+    eighteen = translate_table_ak(output_k_18(line), station)
+    twentyone = translate_table_ak(output_k_21(line), station)
+
+    akIndex = zero + three + six + nine
+    akIndex = akIndex + twelve + fifteen + eighteen + twentyone
+    akIndex = akIndex / 8.0
+    akIndex = str(int(akIndex))
+
+    return str.rjust(str(akIndex), 7, " ")
+
 def output_k_header(station, date, margin):
     """Create formatted header for K output file.
 
@@ -847,6 +824,31 @@ def output_k_header(station, date, margin):
     lines = lines + margin + "        DAY\n"
 
     return lines
+
+def output_k_newline(month, day, year, jd):
+    """Format the beginning of a line for a k file.
+
+    Parameters
+    ----------
+        month : Integer
+            Current month of the data
+        day : Integer
+            Current day of month of the data
+        year :
+            Current year of the data
+        jd :
+            Current julian day of the data
+
+    Returns
+        String
+            Formatted string for new line of a k file.
+    """
+    monthStr = str.rjust(str(month), 2, " ")
+    dayStr = str.rjust(str(day), 2, " ")
+    yearStr = str.rjust(str(year)[2:4], 2, " ")
+    jdStr = str.rjust(str(jd), 3, " ")
+
+    return monthStr + dayStr + yearStr + "  " + jdStr + "  "
 
 def output_k_sum(line):
     """Sum of the 8 values for a given day after truncating each value.
