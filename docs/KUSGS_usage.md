@@ -3,7 +3,8 @@ Algorithm Theoretical Basis for "K-USGS"
 
 E. Joshua Rigler &lt;[erigler@usgs.gov](mailto:erigler@usgs.gov)&gt;
 
-Edward A. McWhirter Jr. &lt;[emcwhirter@usgs.gov](mailto:emcwhirter@usgs.gov)&gt;
+Edward A. McWhirter Jr.
+&lt;[emcwhirter@usgs.gov](mailto:emcwhirter@usgs.gov)&gt;
 
 
 ## Summary ##
@@ -11,7 +12,7 @@ Edward A. McWhirter Jr. &lt;[emcwhirter@usgs.gov](mailto:emcwhirter@usgs.gov)&gt
 K-Indices are used as an approximate measure of magnetic activity at an
 observatory over a 3-hour window. A scale is adopted for each observatory based
 on the typical distribution of magnetic activity at that location. The scale is
-divided into intervals that a translated to values 0 through 9.
+divided into intervals that are translated to values 0 through 9.
 
 
 ## Background and Motivation ##
@@ -44,7 +45,7 @@ In general, the K-USGS algorithm consists of these steps:
     acceptable statistical limits.
  2. Create daily SR-curves for every day in the selected data window.
  3. Subtract the SR-curve to find the K variation of the data.
- 4. Translate the K variation on a 0 to 9 scale.
+ 4. Translate the K variation to a 0 to 9 scale.
 
 > Subset of USGS data used for testing in 2010 included:
 > CMO 1992; FRD 1985-1994,1997; GUA 1992-1994; SJG 1992-1994; TUC 1992-1993
@@ -63,8 +64,9 @@ calculations. Any MHVs that are excluded, or don't exist are replaced with a
 daily or monthly mean as approprate. The exclusion criteria are:
 * MHVs containing minute values having an extreme range.
 * MHVs that fall in the tails of the monthly MHV distribution.
-TODO: define "extreme".
-TODO: define "tails of the distribution"
+
+TODO: define "extreme" (based on standard deviations from monthly mean).
+TODO: define "tails of the distribution" (68-95-99.7 rule - assumes normal distribution)
 
 ### SR Curve ###
 
@@ -77,6 +79,7 @@ Intensity (H) data and the Declination (D) data.
 The SR-curve is created by first making a least squares fit of straight lines to
 a sliding set of three MHVs to generate a series of intersecting lines. A cubic
 spline is then computed with the intercept points of the consecutive lines.
+The SR-curve is then subtracted from the input data.
 
 ![Segments fit to Mean Hourly Values](images/K-USGS_SR-Curve.png)
 
@@ -88,13 +91,18 @@ interval. A time interval is 1 of 8 3-hour windows for every day beginning at
 UTC 00:00. Each observatory has an adopted scale, which is a multiple of the
 Niemegk observatory’s scale shown below. This scale is used to translate the K
 variation nano-Tesla (nT) value of the data onto a 0 to 9 integer scale. The
-“Range” represents this nT cutoff for each “KValue”.
+“Range” represents the nT cutoff for each “KValue”.
 
     Range:    0     5     10    20    40    70    120   200   330   500
     KValue:   0     1     2     3     4     5     6     7     8     9
 
 For the Niemegk observatory, this means that a K variation below 5nT yields K=0,
 a K variation below 10nT yields K=1 and so on.
+
+### K Sum ###
+
+K Sum is one of the output parameters for validating daily outputs. It is the
+sum of the 8 K values within a given day after first truncating each of them.
 
 
 ## Practical Considerations ##

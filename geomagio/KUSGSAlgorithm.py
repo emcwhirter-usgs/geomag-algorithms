@@ -66,7 +66,7 @@ class KUSGSAlgorithm(Algorithm):
             self.rangeLimit : Float
                 Standard deviation limit to use for eliminating based on ranges.
         """
-        # Must run through all of the calculations with E in addition to H.
+        # Must run through all of the calculations with H in addition to E.
         kVariationH = get_ks('H', timeseries, self.rangeLimit, self.distLimit)
         kVariationE = get_ks('E', timeseries, self.rangeLimit, self.distLimit)
 
@@ -177,21 +177,6 @@ def output_k_header(trace, margin):
     line = line + margin + "        DAY\n"
 
     return line
-
-def output_k_sum(line):
-    zero = float(line[13:18])
-    three = float(line[18:23])
-    six = float(line[23:28])
-    nine = float(line[28:33])
-
-    twelve = float(line[35:40])
-    fifteen = float(line[40:45])
-    eighteen = float(line[45:50])
-    twentyone = float(line[50:55])
-
-    ksum = zero + three + six + nine + twelve + fifteen + eighteen + twentyone
-
-    return str.rjust(str(ksum), 10, " ")
 
 def clean_distribution(hour, minimum, maximum, monthAverage):
     """Clean out MHVs at the edges of the monthly distribution, which is done
@@ -659,6 +644,34 @@ def get_traces(trace, interval='hours'):
         traces.append(localTrace)
 
     return traces
+
+def output_k_sum(line):
+    """Sum of the 8 values for a given day after truncating each value.
+
+    Parameters
+    ----------
+        line : string
+            Line of input for a K file, includes the 8 decimal values for
+            the day
+
+    Returns
+    -------
+        String
+            Formatted string ready for output to K file.
+    """
+    zero = int(float(line[13:18]))
+    three = int(float(line[18:23]))
+    six = int(float(line[23:28]))
+    nine = int(float(line[28:33]))
+
+    twelve = int(float(line[35:40]))
+    fifteen = int(float(line[40:45]))
+    eighteen = int(float(line[45:50]))
+    twentyone = int(float(line[50:55]))
+
+    ksum = zero + three + six + nine + twelve + fifteen + eighteen + twentyone
+
+    return str.rjust(str(ksum), 10, " ")
 
 def plot_all(months, days, hours):
     """Plot montly, daily, and hourly statistics before and after cleaning.
