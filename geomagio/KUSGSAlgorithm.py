@@ -96,10 +96,11 @@ def output_k(allK, trace):
     day = date.day
     month = date.month
     year = date.year
+    station = stats.station_name
 
     margin = "      "
 
-    header = output_k_header(trace, margin)
+    header = output_k_header(station, date, margin)
 
     k = allK['k']
     hourBin = allK['hourblock']
@@ -821,13 +822,15 @@ def output_k_21(line):
     """
     return int(float(line[50:55]))
 
-def output_k_header(trace, margin):
+def output_k_header(station, date, margin):
     """Create formatted header for K output file.
 
     Parameters
     ----------
-        trace : Trace <obspy.core.trac.Trace>
-            A time-series trace of data
+        station : string
+            3-Letter observatory code
+        date : UTCDateTime
+            Start date and time for the given data
         margin : string
             Spaces representing left margin
 
@@ -836,10 +839,11 @@ def output_k_header(trace, margin):
         String
             Formatted string with complete header for K file
     """
-    stats = trace.stats
-    date = stats.starttime
+    # stats = trace.stats
+    # date = stats.starttime
 
-    lines = "\n\n         " + stats.station_name.upper() + ",\n"
+    # lines = "\n\n         " + stats.station_name.upper() + ",\n"
+    lines = "\n\n         " + station.upper() + ",\n"
     lines = lines + margin + date.strftime("%B").upper()
     lines = lines + "  " + str(date.year).upper() + "\n"
     lines = lines + margin
