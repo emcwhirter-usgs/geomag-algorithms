@@ -49,6 +49,32 @@ class SqDistAlgorithm(Algorithm):
         self.next_starttime = None
         self.load_state()
 
+    def can_produce_data(self, starttime, endtime, stream):
+        """Determine wheter data can be produced.
+
+        Parameters
+        ----------
+        starttime: UTCDateTime
+            start time of requested output.
+        endtime : UTCDateTime
+            end time of requested output.
+        stream: obspy.core.Stream
+            The input stream we want to make certain has data for the
+            algorithm.
+        """
+        # check state
+        if self.last_observatory is not None \
+                and self.last_channel is not None \
+                and self.next_starttime is not None:
+            # Check for (and skip) older gaps when a state is present
+            if (endtime < self.next_starttime):
+                return False
+            # If the stream isn't in sync with next_starttime, also false
+            if (starttime != self.next_starttime):
+                return False
+
+        return Algorithm.can_produce_data(self, starttime, endtime, stream)
+
     def get_input_interval(self, start, end, observatory=None, channels=None):
         """Get Input Interval
 
