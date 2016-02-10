@@ -70,12 +70,18 @@ class SqDistAlgorithm(Algorithm):
         """
         if self.mag:
             channels = ('H')
-        if observatory == self.last_observatory \
-                and len(channels) == 1 \
-                and channels[0] == self.last_channel \
-                and start == self.next_starttime:
-            # state is up to date, only need new data
-            return (start, end)
+
+        if (end < start):
+            raise AlgorithmException('Start time must come before end.')
+
+        if (observatory == self.last_observatory and len(channels) == 1
+                and channels[0] == self.last_channel):
+            if end < self.next_starttime:
+                raise AlgorithmException(
+                        'State start time must come before end.')
+            else:
+                return (self.next_starttime, end)
+
         # state not up to date, need to prime
         return (start - 3 * 30 * 24 * 60 * 60, end)
 
