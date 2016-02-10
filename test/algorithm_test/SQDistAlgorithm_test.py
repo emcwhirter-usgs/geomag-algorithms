@@ -1,5 +1,6 @@
 from geomagio.algorithm import AlgorithmException
 from geomagio.algorithm import SqDistAlgorithm as sq
+from obspy.core.stream import Stream
 from nose.tools import assert_equals
 import numpy as np
 
@@ -289,6 +290,36 @@ def test_sqdistalgorithm_additive2():
         'Additive output should have a min of -8.783...')
     assert_almost_equal(np.mean(synHat250to300), 20.006498585824623, 8,
         'Additive output should have average of 20.006...')
+
+
+def test_sqdistalgorithm_can_produce_data():
+    """SqDistAlgorithm_test.test_sqdistalgorithm_can_produce_data()
+
+    """
+    start = 1000
+    end = 500
+    algorithm = sq()
+    timeseries = Stream()
+
+    observatory = "BOU"
+    channels = ["H"]
+    algorithm.last_observatory = observatory
+    algorithm.last_channel = channels[0]
+    algorithm.next_starttime = 750
+
+    assert_equals(algorithm.can_produce_data(start, end, timeseries), False,
+            'Expected False when end is before next_starttime.')
+
+    start = 500
+    end = 1000
+
+    assert_equals(algorithm.can_produce_data(start, end, timeseries), False,
+            'Expected False when start not equal next_starttime.')
+
+    algorithm.next_starttime = 500
+
+    assert_equals(algorithm.can_produce_data(start, end, timeseries), True,
+            'Expected True when given valid start, end and next_starttime.')
 
 
 def test_sqdistalgorithm_get_input_interval():
