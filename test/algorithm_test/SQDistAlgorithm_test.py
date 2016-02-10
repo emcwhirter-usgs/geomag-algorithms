@@ -1,3 +1,4 @@
+from geomagio.algorithm import AlgorithmException
 from geomagio.algorithm import SqDistAlgorithm as sq
 from nose.tools import assert_equals
 import numpy as np
@@ -288,3 +289,45 @@ def test_sqdistalgorithm_additive2():
         'Additive output should have a min of -8.783...')
     assert_almost_equal(np.mean(synHat250to300), 20.006498585824623, 8,
         'Additive output should have average of 20.006...')
+
+
+def test_sqdistalgorithm_get_input_interval():
+    """SqDistAlgorithm_test.test_sqdistalgorithm_get_input_interval()
+
+    """
+    start = 1000
+    end = 500
+    algorithm = sq()
+
+    try:
+        algorithm.get_input_interval(start, end)
+        raise Exception('Expected AlgorithmException')
+    except AlgorithmException:
+        pass
+
+    start = 500
+    end = 1000
+    observatory = "BOU"
+    channels = ["H"]
+    algorithm.last_observatory = observatory
+    algorithm.last_channel = channels[0]
+    algorithm.next_starttime = 1500
+    try:
+        algorithm.get_input_interval(start, end, observatory, channels)
+        raise Exception('Expected AlgorithmException')
+    except AlgorithmException:
+        pass
+
+    next_starttime = 750
+    algorithm.next_starttime = next_starttime
+    newstart, newend = algorithm.get_input_interval(
+        start, end, observatory, channels)
+    assert_equals(newstart, next_starttime,
+            'Returned start time should equal self.next_starttime.')
+    assert_equals(newend, end, 'Return end time should match given end time.')
+
+    newstart, newend = algorithm.get_input_interval(start, end)
+    assert_equals(newstart, start - 3 * 30 * 24 * 60 * 60,
+            'Without state, returned start time should be primed.')
+    assert_equals(newend, end,
+            'Without state, returned end time should match given end time.')
