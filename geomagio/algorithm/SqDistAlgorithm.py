@@ -232,12 +232,8 @@ class SqDistAlgorithm(Algorithm):
             if trace.stats.station != self.last_observatory \
                     or trace.stats.channel != self.last_channel \
                     or trace.stats.starttime != self.next_starttime:
-                # state not correct, clear to be safe
-                self.yhat0 = None
-                self.s0 = None
-                self.l0 = None
-                self.b0 = None
-                self.sigma0 = None
+                # state not correct, throw exception
+                raise AlgorithmException('State file does not match expected')
         # process
         yhat, shat, sigmahat, yhat0, s0, l0, b0, sigma0 = self.additive(
                 yobs=trace.data,
