@@ -49,6 +49,19 @@ class SqDistAlgorithm(Algorithm):
         self.next_starttime = None
         self.load_state()
 
+    def clear_state(self):
+        """Clear the state file.
+
+        File name is self.statefile
+        """
+        self.yhat0 = None
+        self.s0 = None
+        self.l0 = None
+        self.b0 = None
+        self.sigma0 = None
+
+        self.save_state()
+
     def can_produce_data(self, starttime, endtime, stream):
         """Determine wheter data can be produced.
 
