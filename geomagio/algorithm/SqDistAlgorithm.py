@@ -113,8 +113,8 @@ class SqDistAlgorithm(Algorithm):
         if (end < start):
             raise AlgorithmException('Start time must come before end.')
 
-        if (observatory == self.last_observatory and len(channels) == 1
-                and channels[0] == self.last_channel):
+        if (observatory == self.last_observatory and
+                len(channels) == 1 and channels[0] == self.last_channel):
             if end < self.next_starttime:
                 raise AlgorithmException(
                         'State start time must come before end.')
